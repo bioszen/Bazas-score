@@ -1,0 +1,2498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2563eb" />
+  <link id="appFavicon" rel="icon" type="image/svg+xml" href="" />
+  <link id="appTouchIcon" rel="apple-touch-icon" href="" />
+  <link id="appManifest" rel="manifest" href="" />
+  <title>Contador de Bazas</title>
+  <script>
+    (() => {
+      const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="80" y1="40" x2="432" y2="472" gradientUnits="userSpaceOnUse"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#16a34a"/></linearGradient></defs><rect x="20" y="20" width="472" height="472" rx="96" fill="url(#g)"/><rect x="136" y="96" width="250" height="330" rx="34" fill="#fff" opacity=".97"/><rect x="136" y="96" width="250" height="330" rx="34" fill="none" stroke="#dbe7f6" stroke-width="6"/><text x="261" y="330" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="196" font-weight="800" fill="#0f172a">B</text><circle cx="178" cy="134" r="14" fill="#16a34a"/><circle cx="334" cy="134" r="14" fill="#16a34a"/><circle cx="334" cy="374" r="14" fill="#16a34a"/></svg>`;
+      const isHosted = /^https?:$/.test(location.protocol);
+      const iconUrl = isHosted ? "icons/icon.svg" : `data:image/svg+xml,${encodeURIComponent(iconSvg)}`;
+      const manifest = {
+        name: "Bazas Score",
+        short_name: "Bazas",
+        description: "Contador de puntajes para el juego Bazas.",
+        id: "./",
+        start_url: "./",
+        scope: "./",
+        display: "standalone",
+        background_color: "#0b1020",
+        theme_color: "#0f172a",
+        icons: [{ src: iconUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }]
+      };
+      document.getElementById("appFavicon").href = iconUrl;
+      document.getElementById("appTouchIcon").href = isHosted ? "icons/apple-touch-icon.png" : iconUrl;
+      document.getElementById("appManifest").href = isHosted ? "manifest.webmanifest" : `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
+    })();
+  </script>
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --sheet: #ffffff;
+      --grid: #cfd8e3;
+      --head: #e8eef7;
+      --head2: #dbe7f6;
+      --text: #111827;
+      --muted: #64748b;
+      --green: #16a34a;
+      --blue: #2563eb;
+      --red: #dc2626;
+      --amber: #f59e0b;
+      --shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0f172a;
+      --sheet: #111827;
+      --grid: #334155;
+      --head: #1e293b;
+      --head2: #26364c;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .page {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      padding: 12px;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.25rem, 2.2vw, 2rem);
+      letter-spacing: -0.03em;
+    }
+
+    .sub {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .toolbar {
+      background: var(--sheet);
+      border: 1px solid var(--grid);
+      box-shadow: var(--shadow);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 4px;
+      min-width: 120px;
+    }
+
+    label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    input, select, button {
+      font: inherit;
+    }
+
+    input, select {
+      border: 1px solid #aab7c7;
+      background: #fff;
+      color: var(--text);
+      border-radius: 8px;
+      min-height: 38px;
+      padding: 7px 9px;
+    }
+
+    html[data-theme="dark"] input,
+    html[data-theme="dark"] select {
+      background: #0f172a;
+      border-color: #475569;
+      color: #f8fafc;
+    }
+
+    input[type="number"] { text-align: center; }
+
+    .check {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      min-height: 38px;
+      padding: 0 4px;
+      white-space: nowrap;
+    }
+
+    .check input {
+      min-height: auto;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--blue);
+    }
+
+    button {
+      border: 0;
+      border-radius: 9px;
+      min-height: 38px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    button.primary { background: var(--blue); color: #fff; }
+    button.green { background: var(--green); color: #fff; }
+    button.red { background: var(--red); color: #fff; }
+    button.amber { background: var(--amber); color: #111827; }
+
+    button.done,
+    button:disabled {
+      background: #94a3b8 !important;
+      color: #334155 !important;
+      cursor: not-allowed;
+      opacity: 0.9;
+    }
+
+    .save-status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      padding: 8px 12px;
+      border-radius: 9px;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 800;
+      border: 1px solid #86efac;
+      white-space: nowrap;
+    }
+
+    .reveal-name-btn {
+      width: fit-content;
+      margin-top: 10px;
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .reveal-name-btn.revealed {
+      background: #334155;
+      color: #cbd5e1;
+      cursor: default;
+    }
+
+    .sheet-wrap {
+      background: var(--sheet);
+      border: 1px solid var(--grid);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .sheet-title {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--grid);
+      background: #f8fafc;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    html[data-theme="dark"] .sheet-title {
+      background: #172033;
+    }
+
+    .sheet-title strong { font-size: 0.98rem; }
+    .hint { color: var(--muted); font-size: 0.86rem; }
+
+    .mobile-tools {
+      display: none;
+      width: 100%;
+      gap: 8px;
+      align-items: end;
+      flex-wrap: wrap;
+      padding-top: 4px;
+    }
+
+    .mobile-tools .field {
+      min-width: 130px;
+      flex: 1;
+    }
+
+    .table-scroll {
+      overflow: auto;
+      max-height: 68vh;
+    }
+
+    table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: auto;
+    }
+
+    th, td {
+      border-right: 1px solid var(--grid);
+      border-bottom: 1px solid var(--grid);
+      padding: 5px;
+      text-align: center;
+      background: #fff;
+    }
+
+    html[data-theme="dark"] td {
+      background: #111827;
+    }
+
+    th {
+      background: var(--head);
+      font-weight: 800;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    thead tr:nth-child(2) th {
+      top: 43px;
+      background: var(--head2);
+    }
+
+    .sticky-1 {
+      position: sticky;
+      left: 0;
+      z-index: 7;
+      background: var(--head);
+    }
+
+    .sticky-2 {
+      position: sticky;
+      left: 78px;
+      z-index: 8;
+      background: var(--head);
+    }
+
+    td.sticky-1, td.sticky-2 { background: #f8fafc; font-weight: 700; }
+    th.sticky-1 { z-index: 6; }
+    th.sticky-2 { z-index: 12; }
+
+    .round-col { width: 78px; min-width: 78px; }
+    .cards-col { width: 62px; min-width: 62px; }
+    .input-col { width: 104px; min-width: 104px; }
+
+    .name-input {
+      width: 100%;
+      min-height: 31px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: 800;
+      background: #fff;
+    }
+
+    html[data-theme="dark"] .name-input,
+    html[data-theme="dark"] .cell-input {
+      background: #0f172a;
+    }
+
+    .cell-input {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid #bac7d6;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 4px;
+    }
+
+    .cell-input:focus, .name-input:focus {
+      outline: 2px solid rgba(37, 99, 235, 0.28);
+      border-color: var(--blue);
+    }
+
+    .score-cell {
+      font-weight: 900;
+      background: #f8fafc;
+    }
+
+    html[data-theme="dark"] .score-cell {
+      background: #172033;
+    }
+
+    .score-empty {
+      color: #94a3b8;
+    }
+
+    .score-good {
+      color: #15803d;
+      background: #f0fdf4;
+    }
+
+    html[data-theme="dark"] .score-good {
+      color: #86efac;
+      background: #052e1a;
+    }
+
+    .score-bad {
+      color: #b91c1c;
+      background: #fef2f2;
+    }
+
+    html[data-theme="dark"] .score-bad {
+      color: #fca5a5;
+      background: #3f1111;
+    }
+
+    .punish-cell {
+      background: #f8fafc;
+      font-weight: 800;
+      color: #334155;
+    }
+
+    html[data-theme="dark"] .punish-cell {
+      background: #172033;
+      color: #cbd5e1;
+    }
+
+    .punish-total {
+      display: block;
+      margin-bottom: 6px;
+      color: #b91c1c;
+      font-size: 0.9rem;
+    }
+
+    .punish-btn {
+      width: 100%;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      min-height: 34px;
+      padding: 6px 8px;
+    }
+
+    .penalty-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.58);
+    }
+
+    .penalty-modal.hidden {
+      display: none;
+    }
+
+    .penalty-card {
+      width: min(420px, 100%);
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 24px 50px rgba(15, 23, 42, 0.25);
+      border: 1px solid #cbd5e1;
+      padding: 16px;
+    }
+
+    html[data-theme="dark"] .penalty-card {
+      background: #111827;
+      border-color: #475569;
+    }
+
+    .penalty-card h3 {
+      margin: 0 0 8px;
+      font-size: 1.25rem;
+    }
+
+    .penalty-card p {
+      margin: 6px 0;
+      color: #475569;
+      line-height: 1.35;
+    }
+
+    .penalty-card input {
+      width: 100%;
+      margin: 12px 0;
+      min-height: 44px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .penalty-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .mobile-fab-row,
+    .mobile-wizard-fab,
+    .manual-fab {
+      display: none;
+    }
+
+    .quick-entry-top-btn,
+    .manual-top-btn {
+      display: inline-block;
+    }
+
+    .manual-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10010;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.62);
+    }
+
+    .manual-modal.hidden {
+      display: none;
+    }
+
+    .manual-card {
+      width: min(720px, 100%);
+      max-height: min(760px, calc(100vh - 32px));
+      overflow: auto;
+      background: var(--sheet);
+      color: var(--text);
+      border: 1px solid var(--grid);
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+      padding: 18px;
+    }
+
+    .manual-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .manual-head h3 {
+      margin: 0;
+      font-size: 1.35rem;
+    }
+
+    .manual-close {
+      min-width: 44px;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 50%;
+    }
+
+    .manual-section {
+      border-top: 1px solid var(--grid);
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+
+    .manual-section h4 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+
+    .manual-section p,
+    .manual-section ul {
+      margin: 6px 0;
+      color: var(--muted);
+      line-height: 1.42;
+      font-weight: 650;
+    }
+
+    .manual-section ul {
+      padding-left: 20px;
+    }
+
+    .manual-section li {
+      margin: 4px 0;
+    }
+
+    .manual-highlight {
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--text);
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .mobile-entry-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.62);
+      overscroll-behavior: contain;
+    }
+
+    .mobile-entry-modal.hidden {
+      display: none;
+    }
+
+    html.mobile-entry-open,
+    body.mobile-entry-open {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    html.quick-entry-keyboard .mobile-entry-help {
+      display: none;
+    }
+
+    .mobile-entry-card {
+      width: min(430px, 100%);
+      max-height: calc(var(--quick-entry-height, 100vh) - 32px);
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      overflow: hidden;
+      background: var(--sheet);
+      color: var(--text);
+      border: 1px solid var(--grid);
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+      padding: 16px;
+    }
+
+    .mobile-entry-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .mobile-entry-head h3 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+
+    .mobile-entry-status {
+      margin-top: 4px;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    .mobile-entry-close {
+      min-width: 44px;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 50%;
+    }
+
+    .mobile-entry-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .mobile-entry-tabs button {
+      min-height: 44px;
+      padding: 8px;
+    }
+
+    .mobile-entry-tabs button.active {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .mobile-entry-main {
+      border: 1px solid var(--grid);
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(148, 163, 184, 0.08);
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+
+    .mobile-entry-player {
+      font-size: clamp(1.45rem, 7vw, 2.2rem);
+      line-height: 1.05;
+      margin: 8px 0 12px;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+
+    .mobile-entry-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .mobile-entry-pill {
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--text);
+    }
+
+    .mobile-entry-input {
+      width: 100%;
+      min-height: 56px;
+      margin-top: 8px;
+      font-size: 1.6rem;
+      font-weight: 900;
+      text-align: center;
+      border-radius: 12px;
+    }
+
+    .mobile-entry-help {
+      min-height: 42px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-weight: 700;
+      line-height: 1.35;
+      max-height: 5.4em;
+      overflow: auto;
+    }
+
+    .mobile-entry-error {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #fecaca;
+      background: #fef2f2;
+      color: #991b1b;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .mobile-entry-error.hidden {
+      display: none;
+    }
+
+    html[data-theme="dark"] .mobile-entry-error {
+      background: #3f1111;
+      border-color: #7f1d1d;
+      color: #fecaca;
+    }
+
+    .mobile-entry-input.invalid {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+    }
+
+    .mobile-entry-main.play-card {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      min-height: 260px;
+    }
+
+    .mobile-entry-main.play-card .mobile-entry-meta {
+      justify-content: center;
+    }
+
+    .mobile-entry-main.play-card .mobile-entry-player {
+      font-size: clamp(2.8rem, 8vw, 5rem);
+      letter-spacing: 0;
+      margin: 18px 0 4px;
+    }
+
+    .mobile-entry-main.play-card .mobile-entry-help {
+      display: block;
+      max-height: none;
+      min-height: 0;
+      margin-top: 0;
+      font-size: clamp(1rem, 2.5vw, 1.35rem);
+      color: var(--muted);
+      overflow: visible;
+    }
+
+    .mobile-entry-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+      background: var(--sheet);
+      z-index: 2;
+    }
+
+    .mobile-entry-actions button {
+      min-height: 48px;
+    }
+
+    .row-ok td { background: #f0fdf4; }
+    .row-warn td { background: #fff7ed; }
+    .row-ok td.sticky-1, .row-ok td.sticky-2 { background: #dcfce7; }
+    .row-warn td.sticky-1, .row-warn td.sticky-2 { background: #ffedd5; }
+
+    html[data-theme="dark"] .row-ok td { background: #052e1a; }
+    html[data-theme="dark"] .row-warn td { background: #3b2607; }
+    html[data-theme="dark"] .row-ok td.sticky-1,
+    html[data-theme="dark"] .row-ok td.sticky-2 { background: #064e3b; }
+    html[data-theme="dark"] .row-warn td.sticky-1,
+    html[data-theme="dark"] .row-warn td.sticky-2 { background: #63390a; }
+
+    .ranking-box {
+      margin-top: 14px;
+      background: #111827;
+      color: #f9fafb;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .ranking-head {
+      padding: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .ranking-head h2 {
+      margin: 0;
+      font-size: clamp(1.2rem, 2.5vw, 2rem);
+    }
+
+    .ranking-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .game-lock-note {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.08);
+      color: #e2e8f0;
+      line-height: 1.35;
+    }
+
+    .ranking-body { padding: 14px; }
+
+    .rank-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .rank-card {
+      display: grid;
+      grid-template-columns: 82px 1fr 110px;
+      align-items: center;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.13);
+    }
+
+    .rank-card.tie {
+      border-color: rgba(245,158,11,0.9);
+      box-shadow: inset 0 0 0 2px rgba(245,158,11,0.22);
+    }
+
+    .place {
+      font-size: clamp(1.4rem, 4vw, 3rem);
+      font-weight: 900;
+    }
+
+    .rname {
+      font-size: clamp(1.4rem, 4.8vw, 3.4rem);
+      font-weight: 900;
+      line-height: 0.95;
+      overflow-wrap: anywhere;
+    }
+
+    .rname.hidden-name {
+      color: #94a3b8;
+      font-size: clamp(1.2rem, 3vw, 2.2rem);
+    }
+
+    .rscore {
+      font-size: clamp(1.5rem, 4vw, 3rem);
+      font-weight: 900;
+      text-align: right;
+      color: #86efac;
+    }
+
+    .tie-label {
+      color: #fcd34d;
+      font-weight: 900;
+      margin-top: 5px;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+    }
+
+    .rank-penalty {
+      color: #fecaca;
+      font-weight: 900;
+      margin-top: 6px;
+      font-size: 0.9rem;
+    }
+
+    .hidden-ranking {
+      padding: 18px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      color: #cbd5e1;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    .small-status {
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+
+    .credits {
+      margin: 14px 0 4px;
+      padding: 12px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .credits strong {
+      color: var(--text);
+    }
+
+    html[data-theme="dark"] td.sticky-1,
+    html[data-theme="dark"] td.sticky-2 {
+      background: #172033;
+    }
+
+    html[data-theme="dark"] .save-status {
+      background: #052e1a;
+      border-color: #166534;
+      color: #bbf7d0;
+    }
+
+    html[data-theme="dark"] .credits strong {
+      color: #f8fafc;
+    }
+
+    @media (max-width: 700px) {
+      .page { padding: 8px; }
+      .toolbar { gap: 8px; align-items: stretch; }
+      .field { min-width: 105px; flex: 1; }
+      button { flex: 1; }
+      .table-scroll { max-height: 62vh; }
+      table { min-width: 720px; }
+      th, td { padding: 4px; }
+      .round-col { width: 82px; min-width: 82px; }
+      .cards-col { width: 58px; min-width: 58px; }
+      .input-col { width: 80px; }
+      .sticky-1 {
+        position: static;
+        left: auto;
+        z-index: 5;
+      }
+      .sticky-2 {
+        left: 0;
+        z-index: 14;
+        box-shadow: 3px 0 0 rgba(148, 163, 184, 0.35);
+      }
+      th.sticky-1 { z-index: 5; }
+      .mobile-tools { display: flex; }
+      .mobile-tools input,
+      .mobile-tools select {
+        min-height: 44px;
+        font-weight: 800;
+      }
+      .quick-entry-top-btn,
+      .manual-top-btn {
+        display: none;
+      }
+      .mobile-fab-row {
+        display: flex;
+        position: fixed;
+        right: 14px;
+        bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+        z-index: 9000;
+        gap: 8px;
+        align-items: center;
+      }
+      .manual-fab,
+      .mobile-wizard-fab {
+        display: block;
+        min-height: 54px;
+        padding: 12px 16px;
+        border-radius: 999px;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.28);
+        flex: none;
+      }
+      .mobile-wizard-fab {
+        background: var(--blue);
+        color: #fff;
+      }
+      .manual-fab {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+      .manual-card {
+        max-height: calc(100dvh - 24px);
+        padding: 14px;
+      }
+      .manual-head h3 {
+        font-size: 1.18rem;
+      }
+      .manual-section {
+        padding-top: 10px;
+        margin-top: 10px;
+      }
+      .mobile-entry-modal {
+        position: fixed;
+        top: var(--quick-entry-top, 0px);
+        left: 0;
+        right: 0;
+        bottom: auto;
+        height: var(--quick-entry-height, 100dvh);
+        z-index: 10000;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        overflow: hidden;
+        padding: 8px;
+        padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        background: rgba(15, 23, 42, 0.62);
+        overscroll-behavior: contain;
+      }
+      .mobile-entry-card {
+        width: min(430px, calc(100vw - 16px));
+        max-height: calc(var(--quick-entry-height, 100dvh) - 16px - env(safe-area-inset-bottom, 0px));
+        padding: 12px;
+        border-radius: 14px;
+      }
+      html.quick-entry-keyboard .mobile-entry-card {
+        max-height: min(calc(var(--quick-entry-height, 100dvh) - 16px - env(safe-area-inset-bottom, 0px)), 46vh);
+      }
+      .mobile-entry-head {
+        margin-bottom: 6px;
+      }
+      .mobile-entry-head h3 { font-size: 1.08rem; }
+      .mobile-entry-status { font-size: 0.82rem; }
+      .mobile-entry-close {
+        min-width: 40px;
+        width: 40px;
+        height: 40px;
+      }
+      .mobile-entry-tabs {
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .mobile-entry-tabs button {
+        min-height: 38px;
+        padding: 7px 6px;
+      }
+      .mobile-entry-main {
+        padding: 10px;
+      }
+      .mobile-entry-player {
+        font-size: clamp(1.2rem, 5.7vw, 1.75rem);
+        margin: 5px 0 8px;
+      }
+      .mobile-entry-pill { padding: 5px 9px; }
+      .mobile-entry-input {
+        min-height: 48px;
+        font-size: 1.35rem;
+      }
+      .mobile-entry-help {
+        min-height: 0;
+        max-height: 4.2em;
+        font-size: 0.94rem;
+      }
+      .mobile-entry-actions {
+        margin-top: 8px;
+      }
+      .mobile-entry-actions button {
+        min-height: 46px;
+      }
+      .rank-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .rscore { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="top">
+      <div>
+        <h1>Contador de Bazas</h1>
+        <p class="sub">Vista tipo Excel para anotar apuestas y resultados. Los puntajes finales se revelan solo al final.</p>
+      </div>
+      <div class="top-actions">
+        <button id="themeBtn">Modo oscuro</button>
+        <button id="fullscreenBtn">Pantalla completa</button>
+        <button class="quick-entry-top-btn primary" id="quickEntryTopBtn">Ingreso rápido</button>
+        <button class="manual-top-btn" id="manualTopBtn">Manual</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="field">
+        <label for="playerCount">Jugadores</label>
+        <select id="playerCount"></select>
+      </div>
+      <div class="field">
+        <label for="maxCards">Máximo cartas</label>
+        <input id="maxCards" type="number" min="1" max="13" value="7" />
+      </div>
+      <label class="check"><input id="extraOne" type="checkbox" /> 1 carta ciega</label>
+      <label class="check"><input id="extraMax" type="checkbox" /> Jugar 7 a perder</label>
+      <button class="primary" id="applyBtn">Aplicar</button>
+      <button class="green" id="newGameBtn">Nueva partida</button>
+      <button id="importBtn">Importar</button>
+      <button class="amber" id="clearCellsBtn">Limpiar casillas</button>
+      <button class="red" id="resetBtn">Reiniciar</button>
+      <button id="exportBtn">Respaldar</button>
+      <button class="save-status" id="saveStatus" type="button">Guardado automático activo</button>
+      <input id="importFileInput" type="file" accept="application/json,.json" hidden />
+    </div>
+
+    <section class="sheet-wrap">
+      <div class="sheet-title">
+        <strong>Tabla de juego</strong>
+        <span class="hint">Verde: ronda completa. Naranjo: revisar suma de ganadas.</span>
+        <div class="mobile-tools" aria-label="Herramientas móviles">
+          <div class="field">
+            <label for="mobilePlayerSelect">Jugador visible</label>
+            <select id="mobilePlayerSelect"></select>
+          </div>
+          <div class="field">
+            <label for="mobilePlayerName">Nombre</label>
+            <input id="mobilePlayerName" type="text" autocomplete="off" />
+          </div>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="gameTable"></table>
+      </div>
+    </section>
+
+    <section class="ranking-box" id="ranking">
+      <div class="ranking-head">
+        <div>
+          <h2>Ranking final</h2>
+          <div class="small-status" id="rankingStatus">Oculto</div>
+        </div>
+        <div class="ranking-actions">
+          <button class="red" id="finishGameBtn">Terminar partida ahora</button>
+          <button class="green" id="revealScoresBtn">Revelar siguiente puntaje</button>
+          <button class="amber" id="hideRankingBtn">Ocultar ranking</button>
+        </div>
+      </div>
+      <div class="ranking-body">
+        <div id="rankingContent"></div>
+      </div>
+    </section>
+  
+    <div class="mobile-fab-row" aria-label="Accesos rápidos">
+      <button class="manual-fab" id="manualFab">Manual</button>
+      <button class="mobile-wizard-fab" id="mobileWizardFab">Ingreso rápido</button>
+    </div>
+
+    <div class="manual-modal hidden" id="manualModal" aria-hidden="true">
+      <div class="manual-card" role="dialog" aria-modal="true" aria-labelledby="manualTitle">
+        <div class="manual-head">
+          <div>
+            <h3 id="manualTitle">Manual Bazas Score</h3>
+          </div>
+          <button class="manual-close" id="manualClose" aria-label="Cerrar manual">×</button>
+        </div>
+
+        <div class="manual-highlight">
+          Recomendación principal: usa <strong>Ingreso rápido</strong> como flujo normal de la partida. Es la opción recomendada porque guía paso a paso: nombres, apuestas en orden rotatorio, pausa de juego y ganadas, ayudando a evitar saltos o errores.
+        </div>
+
+        <div class="manual-section">
+          <h4>Flujo recomendado: Ingreso rápido</h4>
+          <ul>
+            <li>Abre <strong>Ingreso rápido</strong> al comenzar y úsalo como guía principal durante toda la partida.</li>
+            <li>Primero escribe los nombres de los jugadores.</li>
+            <li>En cada ronda, Ingreso rápido pide todas las <strong>apuestas</strong>, muestra <strong>A JUGAR</strong>, y después pide las <strong>ganadas</strong>.</li>
+            <li>La tabla queda disponible para revisar o corregir cualquier casilla manualmente.</li>
+          </ul>
+        </div>
+
+        <div class="manual-section">
+          <h4>Orden rotatorio</h4>
+          <p>El jugador inicial cambia en cada ronda. Con 5 jugadores: ronda 1 va 1 → 2 → 3 → 4 → 5; ronda 2 va 2 → 3 → 4 → 5 → 1; ronda 3 va 3 → 4 → 5 → 1 → 2, y así sucesivamente.</p>
+        </div>
+
+        <div class="manual-section">
+          <h4>Reglas de apuestas</h4>
+          <ul>
+            <li>Cada jugador apuesta cuántas cartas cree que ganará; puede apostar 0.</li>
+            <li>En <strong>Ingreso rápido</strong>, el último jugador de la ronda no puede dejar la suma total de apuestas igual al número de cartas de esa ronda.</li>
+            <li>Ejemplo: si la ronda es de 2 cartas, la suma total de apuestas no puede quedar en 2.</li>
+          </ul>
+        </div>
+
+        <div class="manual-section">
+          <h4>Puntajes</h4>
+          <ul>
+            <li>Si cumple la apuesta: <strong>10 puntos + 3 por cada carta apostada</strong>. Ejemplo: apuesta 2 y gana 2 = 16 puntos.</li>
+            <li>Si no cumple: <strong>-3 por cada carta de diferencia</strong>. Ejemplo: apuesta 2 y gana 0 = -6 puntos.</li>
+            <li>Ganar de más o de menos castiga igual: solo importa la diferencia absoluta.</li>
+          </ul>
+        </div>
+
+        <div class="manual-section">
+          <h4>Rondas y ranking</h4>
+          <ul>
+            <li>Por defecto se juega de 1 a 7 cartas y luego baja de 6 a 1.</li>
+            <li>Puedes ajustar el máximo de cartas y activar rondas opcionales.</li>
+            <li>El ranking final queda bloqueado hasta completar la partida o usar <strong>Terminar partida ahora</strong>.</li>
+            <li>Los puntajes finales se revelan de a poco; si hay empate, se marca y se pueden revelar los nombres empatados juntos.</li>
+          </ul>
+        </div>
+
+        <div class="manual-section">
+          <h4>Guardar y respaldar</h4>
+          <ul>
+            <li>La partida se guarda automáticamente en el dispositivo.</li>
+            <li><strong>Guardado automático activo</strong> también funciona como botón: tócalo para forzar un guardado manual si lo necesitas.</li>
+            <li><strong>Respaldar</strong> descarga un archivo JSON de seguridad.</li>
+            <li><strong>Importar</strong> carga un respaldo anterior.</li>
+            <li>En Android, abre la app desde GitHub Pages en Chrome o un navegador compatible y usa el menú del navegador para <strong>Instalar app</strong> o <strong>Agregar a pantalla principal</strong>.</li>
+            <li>En iPhone, abre la app en Safari, toca <strong>Compartir</strong> y luego <strong>Agregar a pantalla de inicio</strong>.</li>
+            <li>Después de instalarla o agregarla a la pantalla de inicio, la app queda disponible para usarla sin internet. La partida se guarda en este mismo dispositivo.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-entry-modal hidden" id="mobileWizardModal" aria-hidden="true">
+      <div class="mobile-entry-card" role="dialog" aria-modal="true" aria-labelledby="mobileWizardTitle">
+        <div class="mobile-entry-head">
+          <div>
+            <h3 id="mobileWizardTitle">Ingreso rápido</h3>
+            <div class="mobile-entry-status" id="mobileWizardStatus">Nombres</div>
+          </div>
+          <button class="mobile-entry-close" id="mobileWizardClose" aria-label="Cerrar ingreso rápido">×</button>
+        </div>
+        <div class="mobile-entry-tabs">
+          <button id="mobileWizardNames" type="button">Nombres</button>
+          <button id="mobileWizardBids" type="button">Apuestas</button>
+          <button id="mobileWizardWins" type="button">Ganadas</button>
+        </div>
+        <div class="mobile-entry-main" id="mobileWizardMain">
+          <div class="mobile-entry-meta" id="mobileWizardMeta"></div>
+          <div class="mobile-entry-player" id="mobileWizardPlayer"></div>
+          <label id="mobileWizardInputLabel" for="mobileWizardInput">Nombre</label>
+          <input class="mobile-entry-input" id="mobileWizardInput" autocomplete="off" />
+          <div class="mobile-entry-error hidden" id="mobileWizardError"></div>
+          <div class="mobile-entry-help" id="mobileWizardHelp"></div>
+        </div>
+        <div class="mobile-entry-actions">
+          <button id="mobileWizardPrev" type="button">Anterior</button>
+          <button class="primary" id="mobileWizardNext" type="button">Siguiente</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="penalty-modal hidden" id="penaltyModal" aria-hidden="true">
+      <div class="penalty-card" role="dialog" aria-modal="true" aria-labelledby="penaltyTitle">
+        <h3 id="penaltyTitle">Castigo manual</h3>
+        <p><strong>Jugador:</strong> <span id="penaltyPlayerName"></span></p>
+        <p><strong>Castigo acumulado actual:</strong> <span id="penaltyCurrent">0</span></p>
+        <p>Escribe solo los puntos a quitar esta vez. Puedes usar <strong>-20</strong> o <strong>20</strong>; ambos descontarán 20 puntos. Para eliminar el castigo acumulado de este jugador, usa <strong>Quitar castigo</strong>.</p>
+        <input id="penaltyInput" type="number" step="1" value="-20" inputmode="numeric" />
+        <div class="penalty-actions">
+          <button id="penaltyCancel" onclick="closePenaltyModal()">Cancelar</button>
+          <button class="amber" id="penaltyRemove" onclick="removePenaltyFromModal()">Quitar castigo</button>
+          <button class="red" id="penaltyApply" onclick="applyPenaltyFromModal()">Aplicar castigo</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="credits">
+      © 2025 <strong>BioSzen</strong> – Todos los derechos reservados
+    </footer>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "bazas_excel_like_v9_castigo_directo";
+    const $ = (id) => document.getElementById(id);
+    let mobileWizard = { mode: "names", playerIndex: 0, roundIndex: 0, orderStep: 0 };
+    let mobileWizardFocusTimer = 0;
+
+    function defaultState() {
+      return {
+        playerCount: 5,
+        maxCards: 7,
+        extraOne: false,
+        extraMax: false,
+        players: Array.from({ length: 12 }, (_, i) => `Jugador ${i + 1}`),
+        data: {},
+        penalties: Array(12).fill(0),
+        revealCount: 0,
+        revealedNames: {},
+        gameFinished: false,
+        finishReason: "",
+        theme: "dark"
+      };
+    }
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const saved = raw ? JSON.parse(raw) : {};
+        const base = defaultState();
+        const merged = { ...base, ...saved };
+        merged.players = Array.isArray(saved.players) ? saved.players : base.players;
+        while (merged.players.length < 12) merged.players.push(`Jugador ${merged.players.length + 1}`);
+        merged.playerCount = clamp(merged.playerCount, 2, 12, 5);
+        merged.maxCards = clamp(merged.maxCards, 1, 13, 7);
+        merged.penalties = Array.isArray(saved.penalties) ? saved.penalties : Array(12).fill(0);
+        while (merged.penalties.length < 12) merged.penalties.push(0);
+        merged.revealCount = clamp(saved.revealCount ?? 0, 0, merged.playerCount, 0);
+        merged.revealedNames = saved.revealedNames && typeof saved.revealedNames === "object" ? saved.revealedNames : {};
+        merged.data = saved.data && typeof saved.data === "object" ? saved.data : {};
+        merged.gameFinished = Boolean(saved.gameFinished);
+        merged.finishReason = typeof saved.finishReason === "string" ? saved.finishReason : "";
+        merged.theme = saved.theme === "light" || saved.theme === "dark" ? saved.theme : base.theme;
+        return merged;
+      } catch {
+        return defaultState();
+      }
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        updateSaveStatus("Guardado automático activo");
+      } catch {
+        updateSaveStatus("No se pudo guardar");
+      }
+    }
+
+    function updateSaveStatus(text) {
+      const el = $("saveStatus");
+      if (!el) return;
+      el.textContent = text;
+      clearTimeout(updateSaveStatus.timer);
+      updateSaveStatus.timer = setTimeout(() => {
+        if (el) el.textContent = "Guardado automático activo";
+      }, 1600);
+    }
+
+    function clamp(value, min, max, fallback) {
+      const n = parseInt(value, 10);
+      if (Number.isNaN(n)) return fallback;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function resetReveal(options = {}) {
+      state.revealCount = 0;
+      state.revealedNames = {};
+      if (!options.keepFinished) {
+        state.gameFinished = false;
+        state.finishReason = "";
+      }
+    }
+
+    function setTheme(theme) {
+      state.theme = theme === "dark" ? "dark" : "light";
+      document.documentElement.dataset.theme = state.theme;
+      const btn = $("themeBtn");
+      if (btn) btn.textContent = state.theme === "dark" ? "Modo claro" : "Modo oscuro";
+    }
+
+    function numericCellValue(value, cards, clampValue = false) {
+      const raw = String(value ?? "").trim();
+      if (raw === "") return "";
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return "";
+      const whole = Math.trunc(n);
+      if (!clampValue && (whole < 0 || whole > cards)) return whole;
+      return Math.max(0, Math.min(cards, whole));
+    }
+
+    function isValidEntry(value, cards) {
+      if (value === "") return false;
+      const n = Number(value);
+      return Number.isInteger(n) && n >= 0 && n <= cards;
+    }
+
+    function rounds() {
+      const max = clamp(state.maxCards, 1, 13, 7);
+      const arr = [];
+      for (let i = 1; i <= max; i++) arr.push(i);
+      for (let i = max - 1; i >= 1; i--) arr.push(i);
+      if (state.extraOne) arr.push(1);
+      if (state.extraMax) arr.push(7);
+      return arr;
+    }
+
+    function roundLabel(index) {
+      const max = clamp(state.maxCards, 1, 13, 7);
+      const mainCount = max * 2 - 1;
+      if (state.extraOne && index === mainCount) return "1 carta ciega";
+      if (state.extraMax && index === mainCount + (state.extraOne ? 1 : 0)) return "7 a perder";
+      return `Ronda ${index + 1}`;
+    }
+
+    function rowData(r) {
+      if (!state.data[r]) state.data[r] = { bid: Array(12).fill(""), win: Array(12).fill("") };
+      if (!Array.isArray(state.data[r].bid)) state.data[r].bid = Array(12).fill("");
+      if (!Array.isArray(state.data[r].win)) state.data[r].win = Array(12).fill("");
+      while (state.data[r].bid.length < 12) state.data[r].bid.push("");
+      while (state.data[r].win.length < 12) state.data[r].win.push("");
+      state.data[r].bid = state.data[r].bid.map(v => v === "" ? "" : numericCellValue(v, 13, true));
+      state.data[r].win = state.data[r].win.map(v => v === "" ? "" : numericCellValue(v, 13, true));
+      return state.data[r];
+    }
+
+    function score(bid, win) {
+      if (bid === "" || win === "") return null;
+      const b = Number(bid);
+      const w = Number(win);
+      if (!Number.isInteger(b) || !Number.isInteger(w)) return null;
+      if (b === w) return 10 + 3 * b;
+      return -3 * Math.abs(b - w);
+    }
+
+    function roundStatus(r, cards) {
+      const rd = rowData(r);
+      let missing = 0;
+      let invalid = 0;
+      let winsSum = 0;
+
+      for (let p = 0; p < state.playerCount; p++) {
+        const bid = rd.bid[p];
+        const win = rd.win[p];
+        if (bid === "" || win === "") {
+          missing++;
+          continue;
+        }
+        if (!isValidEntry(bid, cards) || !isValidEntry(win, cards)) {
+          invalid++;
+          continue;
+        }
+        winsSum += Number(win);
+      }
+
+      const complete = missing === 0 && invalid === 0;
+      return {
+        complete,
+        valid: complete && winsSum === cards,
+        missing,
+        invalid,
+        winsSum
+      };
+    }
+
+    function gameStatus() {
+      const rs = rounds();
+      const status = {
+        totalRounds: rs.length,
+        completeRounds: 0,
+        missingRounds: 0,
+        invalidRounds: 0,
+        sumWarningRounds: 0,
+        ready: false
+      };
+
+      rs.forEach((cards, r) => {
+        const row = roundStatus(r, cards);
+        if (row.valid) status.completeRounds++;
+        if (row.missing > 0) status.missingRounds++;
+        if (row.invalid > 0) status.invalidRounds++;
+        if (row.complete && row.winsSum !== cards) status.sumWarningRounds++;
+      });
+
+      status.ready = status.completeRounds === status.totalRounds;
+      return status;
+    }
+
+    function canRevealRanking() {
+      return state.gameFinished || gameStatus().ready;
+    }
+
+    function totals() {
+      const total = Array(state.playerCount).fill(0);
+      rounds().forEach((cards, r) => {
+        const rd = rowData(r);
+        for (let p = 0; p < state.playerCount; p++) {
+          if (!isValidEntry(rd.bid[p], cards) || !isValidEntry(rd.win[p], cards)) continue;
+          const s = score(rd.bid[p], rd.win[p]);
+          if (s !== null) total[p] += s;
+        }
+      });
+      for (let p = 0; p < state.playerCount; p++) {
+        total[p] += Number(state.penalties?.[p] || 0);
+      }
+      return total.map((points, i) => ({ name: state.players[i] || `Jugador ${i + 1}`, points, index: i }));
+    }
+
+    function rankingRows() {
+      const rows = totals().sort((a, b) => b.points - a.points || a.index - b.index);
+      let previous = null;
+      let place = 0;
+      rows.forEach((row, i) => {
+        if (previous === null || row.points !== previous) {
+          place = i + 1;
+          previous = row.points;
+        }
+        row.place = place;
+      });
+      const counts = {};
+      rows.forEach(r => counts[r.points] = (counts[r.points] || 0) + 1);
+      rows.forEach(r => r.tie = counts[r.points] > 1);
+      return rows;
+    }
+
+    function nextRevealCount(rows, currentCount) {
+      const current = Math.max(0, Math.min(currentCount || 0, state.playerCount));
+      if (current >= state.playerCount) return current;
+
+      const nextRow = rows[current];
+      if (!nextRow) return current;
+
+      let next = current + 1;
+      while (next < rows.length && rows[next].points === nextRow.points) {
+        next++;
+      }
+      return Math.min(state.playerCount, next);
+    }
+
+    function revealTieGroup(rows, playerIndex) {
+      const selected = rows.find(row => row.index === playerIndex);
+      if (!selected) return;
+
+      rows
+        .filter(row => row.points === selected.points)
+        .forEach(row => {
+          state.revealedNames[row.index] = true;
+        });
+    }
+
+    function renderControls() {
+      const select = $("playerCount");
+      select.innerHTML = "";
+      for (let i = 2; i <= 12; i++) {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = i;
+        if (i === state.playerCount) opt.selected = true;
+        select.appendChild(opt);
+      }
+      $("maxCards").value = state.maxCards;
+      $("extraOne").checked = state.extraOne;
+      $("extraMax").checked = state.extraMax;
+      renderMobilePlayerTools();
+    }
+
+    function renderMobilePlayerTools() {
+      const mobileSelect = $("mobilePlayerSelect");
+      const mobileName = $("mobilePlayerName");
+      if (!mobileSelect || !mobileName) return;
+
+      const previous = clamp(mobileSelect.value, 0, state.playerCount - 1, 0);
+      const selected = Math.min(previous, state.playerCount - 1);
+      mobileSelect.innerHTML = "";
+
+      for (let p = 0; p < state.playerCount; p++) {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = state.players[p] || `Jugador ${p + 1}`;
+        if (p === selected) opt.selected = true;
+        mobileSelect.appendChild(opt);
+      }
+
+      mobileName.value = state.players[selected] || `Jugador ${selected + 1}`;
+    }
+
+    function scrollToPlayer(playerIndex) {
+      const scroller = document.querySelector(".table-scroll");
+      const playerHeader = document.querySelector(`.name-input[data-name="${playerIndex}"]`)?.closest("th");
+      if (!scroller || !playerHeader) return;
+
+      const stickyCardsWidth = 58;
+      const targetLeft = Math.max(0, playerHeader.offsetLeft - stickyCardsWidth - 8);
+      try {
+        scroller.scrollTo({ left: targetLeft, behavior: "smooth" });
+      } catch {
+        scroller.scrollLeft = targetLeft;
+      }
+    }
+
+    function mobileOrderForRound(roundIndex) {
+      const count = state.playerCount;
+      const start = count > 0 ? roundIndex % count : 0;
+      return Array.from({ length: count }, (_, i) => (start + i) % count);
+    }
+
+    function currentWizardPlayerIndex() {
+      if (mobileWizard.mode === "names") {
+        return clamp(mobileWizard.playerIndex, 0, state.playerCount - 1, 0);
+      }
+      if (mobileWizard.mode === "play") {
+        return mobileOrderForRound(mobileWizard.roundIndex)[0] ?? 0;
+      }
+      const order = mobileOrderForRound(mobileWizard.roundIndex);
+      return order[clamp(mobileWizard.orderStep, 0, order.length - 1, 0)] ?? 0;
+    }
+
+    function normalizeMobileWizard() {
+      const rs = rounds();
+      mobileWizard.playerIndex = clamp(mobileWizard.playerIndex, 0, state.playerCount - 1, 0);
+      mobileWizard.roundIndex = clamp(mobileWizard.roundIndex, 0, Math.max(0, rs.length - 1), 0);
+      mobileWizard.orderStep = clamp(mobileWizard.orderStep, 0, Math.max(0, state.playerCount - 1), 0);
+      if (!["names", "bid", "play", "win"].includes(mobileWizard.mode)) mobileWizard.mode = "names";
+    }
+
+    function isLastBidderStep() {
+      return mobileWizard.mode === "bid" && mobileWizard.orderStep === state.playerCount - 1;
+    }
+
+    function currentBidRuleStatus() {
+      if (!isLastBidderStep()) return { invalid: false, total: 0, cards: rounds()[mobileWizard.roundIndex] || 1 };
+
+      const cards = rounds()[mobileWizard.roundIndex] || 1;
+      const rd = rowData(mobileWizard.roundIndex);
+      const order = mobileOrderForRound(mobileWizard.roundIndex);
+      const total = order.reduce((sum, playerIndex) => {
+        const value = rd.bid[playerIndex];
+        if (value === "" || value === null || value === undefined) return sum;
+        const n = Number(value);
+        return Number.isInteger(n) ? sum + n : sum;
+      }, 0);
+
+      return {
+        invalid: total === cards,
+        total,
+        cards
+      };
+    }
+
+    function updateMobileWizardValidationUi() {
+      const error = $("mobileWizardError");
+      const input = $("mobileWizardInput");
+      const next = $("mobileWizardNext");
+      if (!error || !input || !next) return { invalid: false };
+
+      const status = currentBidRuleStatus();
+      const isInvalid = mobileWizard.mode === "bid" && status.invalid;
+
+      error.classList.toggle("hidden", !isInvalid);
+      input.classList.toggle("invalid", isInvalid);
+      next.disabled = isInvalid;
+
+      if (isInvalid) {
+        error.textContent = `La suma de apuestas queda en ${status.total}, igual a ${status.cards} carta(s). El último jugador debe elegir otro número.`;
+      } else {
+        error.textContent = "";
+      }
+
+      return status;
+    }
+
+    function updateQuickEntryViewport() {
+      const viewport = window.visualViewport;
+      const height = Math.max(320, Math.floor(viewport?.height || window.innerHeight || 640));
+      const top = Math.max(0, Math.floor(viewport?.offsetTop || 0));
+      document.documentElement.style.setProperty("--quick-entry-height", `${height}px`);
+      document.documentElement.style.setProperty("--quick-entry-top", `${top}px`);
+    }
+
+    function setQuickEntryOpen(isOpen) {
+      document.documentElement.classList.toggle("mobile-entry-open", isOpen);
+      document.body.classList.toggle("mobile-entry-open", isOpen);
+      if (!isOpen) document.documentElement.classList.remove("quick-entry-keyboard");
+      if (isOpen) updateQuickEntryViewport();
+    }
+
+    function keepQuickEntryInputVisible() {
+      const input = $("mobileWizardInput");
+      const main = input?.closest(".mobile-entry-main");
+      if (!input || !main || input.hidden) return;
+
+      main.scrollTop = 0;
+      const inputRect = input.getBoundingClientRect();
+      const mainRect = main.getBoundingClientRect();
+      const overflowTop = inputRect.top - mainRect.top - 14;
+      const overflowBottom = inputRect.bottom - mainRect.bottom + 14;
+
+      if (overflowTop < 0) main.scrollTop += overflowTop;
+      else if (overflowBottom > 0) main.scrollTop += overflowBottom;
+    }
+
+    function focusMobileWizardInput(delay = 40) {
+      if (mobileWizard.mode === "play") return;
+      clearTimeout(mobileWizardFocusTimer);
+      mobileWizardFocusTimer = setTimeout(() => {
+        updateQuickEntryViewport();
+        const input = $("mobileWizardInput");
+        if (!input || input.hidden || input.disabled) return;
+        try {
+          input.focus({ preventScroll: true });
+        } catch {
+          input.focus();
+        }
+        document.documentElement.classList.add("quick-entry-keyboard");
+        updateQuickEntryViewport();
+        input.select();
+        requestAnimationFrame(keepQuickEntryInputVisible);
+      }, delay);
+    }
+
+    function handleQuickEntryViewportChange() {
+      const modal = $("mobileWizardModal");
+      if (!modal || modal.classList.contains("hidden")) return;
+      updateQuickEntryViewport();
+      requestAnimationFrame(keepQuickEntryInputVisible);
+    }
+
+    function setMobileWizardMode(mode) {
+      commitMobileWizardValue(true);
+      mobileWizard.mode = mode;
+      mobileWizard.playerIndex = 0;
+      mobileWizard.roundIndex = 0;
+      mobileWizard.orderStep = 0;
+      renderMobileWizard();
+      focusMobileWizardInput();
+    }
+
+    function openMobileWizard() {
+      normalizeMobileWizard();
+      setQuickEntryOpen(true);
+      $("mobileWizardModal").classList.remove("hidden");
+      $("mobileWizardModal").setAttribute("aria-hidden", "false");
+      renderMobileWizard();
+      focusMobileWizardInput(80);
+    }
+
+    function closeMobileWizard() {
+      clearTimeout(mobileWizardFocusTimer);
+      commitMobileWizardValue(true);
+      $("mobileWizardModal").classList.add("hidden");
+      $("mobileWizardModal").setAttribute("aria-hidden", "true");
+      setQuickEntryOpen(false);
+    }
+
+    function finishMobileWizardFlow() {
+      mobileWizard.orderStep = state.playerCount - 1;
+      updateSaveStatus("Ingreso rápido completo");
+      save();
+      closeMobileWizard();
+      render();
+      requestAnimationFrame(() => {
+        $("ranking")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+
+    function renderMobileWizard() {
+      const modal = $("mobileWizardModal");
+      if (!modal || modal.classList.contains("hidden")) return;
+      normalizeMobileWizard();
+
+      const rs = rounds();
+      const playerIndex = currentWizardPlayerIndex();
+      const playerName = state.players[playerIndex] || `Jugador ${playerIndex + 1}`;
+      const input = $("mobileWizardInput");
+      const main = $("mobileWizardMain");
+      const label = $("mobileWizardInputLabel");
+      const isNames = mobileWizard.mode === "names";
+      const isPlay = mobileWizard.mode === "play";
+      const field = mobileWizard.mode === "win" ? "win" : "bid";
+      const cards = rs[mobileWizard.roundIndex] || 1;
+      const rd = rowData(mobileWizard.roundIndex);
+      const order = mobileOrderForRound(mobileWizard.roundIndex).map(i => state.players[i] || `Jugador ${i + 1}`);
+
+      $("mobileWizardNames").classList.toggle("active", mobileWizard.mode === "names");
+      $("mobileWizardBids").classList.toggle("active", mobileWizard.mode === "bid");
+      $("mobileWizardWins").classList.toggle("active", mobileWizard.mode === "win");
+      $("mobileWizardPrev").textContent = "Anterior";
+      $("mobileWizardNext").textContent = isPlay ? "Terminó la ronda" : "Siguiente";
+      $("mobileWizardNext").disabled = false;
+      main.classList.toggle("play-card", isPlay);
+
+      $("mobileWizardError").classList.add("hidden");
+      $("mobileWizardError").textContent = "";
+      input.classList.remove("invalid");
+
+      if (isNames) {
+        $("mobileWizardStatus").textContent = `Nombres: ${mobileWizard.playerIndex + 1}/${state.playerCount}`;
+        $("mobileWizardMeta").innerHTML = `<span class="mobile-entry-pill">Jugador ${mobileWizard.playerIndex + 1}</span>`;
+        $("mobileWizardPlayer").textContent = playerName;
+        label.textContent = "Nombre";
+        label.hidden = false;
+        input.hidden = false;
+        input.disabled = false;
+        input.type = "text";
+        input.removeAttribute("inputmode");
+        input.removeAttribute("min");
+        input.removeAttribute("max");
+        input.removeAttribute("step");
+        input.value = playerName;
+        $("mobileWizardHelp").textContent = "Escribe el nombre. Siguiente pasa al próximo jugador; al terminar pasa a Apuestas.";
+      } else if (isPlay) {
+        $("mobileWizardStatus").textContent = `A jugar: ${roundLabel(mobileWizard.roundIndex)} de ${cards} carta(s)`;
+        $("mobileWizardMeta").innerHTML = `<span class="mobile-entry-pill">${roundLabel(mobileWizard.roundIndex)}</span><span class="mobile-entry-pill">${cards} carta(s)</span>`;
+        $("mobileWizardPlayer").textContent = "A JUGAR";
+        label.hidden = true;
+        input.hidden = true;
+        input.disabled = true;
+        input.blur();
+        document.documentElement.classList.remove("quick-entry-keyboard");
+        $("mobileWizardHelp").textContent = "HOY ES NOCHE DE BAZAS";
+      } else {
+        $("mobileWizardStatus").textContent = `${mobileWizard.mode === "bid" ? "Apuestas" : "Ganadas"}: ronda ${mobileWizard.roundIndex + 1}/${rs.length}, jugador ${mobileWizard.orderStep + 1}/${state.playerCount}`;
+        $("mobileWizardMeta").innerHTML = `<span class="mobile-entry-pill">${roundLabel(mobileWizard.roundIndex)}</span><span class="mobile-entry-pill">${cards} carta(s)</span>`;
+        $("mobileWizardPlayer").textContent = playerName;
+        label.textContent = mobileWizard.mode === "bid" ? "Apuesta" : "Ganadas";
+        label.hidden = false;
+        input.hidden = false;
+        input.disabled = false;
+        input.type = "number";
+        input.inputMode = "numeric";
+        input.min = "0";
+        input.max = String(cards);
+        input.step = "1";
+        input.value = rd[field][playerIndex] ?? "";
+        $("mobileWizardHelp").textContent = isLastBidderStep()
+          ? `Último en apostar. La suma no puede ser ${cards}.`
+          : `Orden: ${order.join(" → ")}. Primero apuestas; después ganadas en el mismo orden.`;
+      }
+      updateMobileWizardValidationUi();
+      keepQuickEntryInputVisible();
+    }
+
+    function commitMobileWizardValue(clampValue = false) {
+      const modal = $("mobileWizardModal");
+      if (!modal || modal.classList.contains("hidden")) return;
+
+      const input = $("mobileWizardInput");
+      const playerIndex = currentWizardPlayerIndex();
+
+      if (mobileWizard.mode === "play") return;
+
+      if (mobileWizard.mode === "names") {
+        const value = input.value.trim() || `Jugador ${playerIndex + 1}`;
+        state.players[playerIndex] = value;
+        const tableNameInput = document.querySelector(`.name-input[data-name="${playerIndex}"]`);
+        if (tableNameInput) tableNameInput.value = value;
+        const option = $("mobilePlayerSelect")?.querySelector(`option[value="${playerIndex}"]`);
+        if (option) option.textContent = value;
+        if ($("mobilePlayerSelect")?.value === String(playerIndex)) $("mobilePlayerName").value = value;
+        resetReveal({ keepFinished: true });
+        save();
+        renderRanking();
+        return;
+      }
+
+      const cards = rounds()[mobileWizard.roundIndex] || 1;
+      const field = mobileWizard.mode === "win" ? "win" : "bid";
+      const value = numericCellValue(input.value, cards, clampValue);
+      if (clampValue) input.value = value;
+      rowData(mobileWizard.roundIndex)[field][playerIndex] = value;
+
+      const tableInput = document.querySelector(`[data-r="${mobileWizard.roundIndex}"][data-p="${playerIndex}"][data-field="${field}"]`);
+      if (tableInput) tableInput.value = value;
+
+      resetReveal();
+      updateScoreCell(mobileWizard.roundIndex, playerIndex);
+      updateRowClass(mobileWizard.roundIndex);
+      save();
+      renderRanking();
+    }
+
+    function moveMobileWizard(direction) {
+      commitMobileWizardValue(true);
+
+      if (mobileWizard.mode === "names") {
+        mobileWizard.playerIndex += direction;
+        if (mobileWizard.playerIndex >= state.playerCount) {
+          mobileWizard.mode = "bid";
+          mobileWizard.playerIndex = 0;
+          mobileWizard.roundIndex = 0;
+          mobileWizard.orderStep = 0;
+        } else if (mobileWizard.playerIndex < 0) {
+          mobileWizard.playerIndex = 0;
+        }
+      } else {
+        const rs = rounds();
+        if (direction > 0) {
+          if (mobileWizard.mode === "play") {
+            mobileWizard.mode = "win";
+            mobileWizard.orderStep = 0;
+          } else if (mobileWizard.orderStep < state.playerCount - 1) {
+            mobileWizard.orderStep++;
+          } else if (mobileWizard.mode === "bid") {
+            const status = currentBidRuleStatus();
+            if (status.invalid) {
+              updateMobileWizardValidationUi();
+              focusMobileWizardInput(0);
+              return;
+            }
+            mobileWizard.mode = "play";
+            mobileWizard.orderStep = 0;
+          } else if (mobileWizard.roundIndex < rs.length - 1) {
+            mobileWizard.mode = "bid";
+            mobileWizard.roundIndex++;
+            mobileWizard.orderStep = 0;
+          } else {
+            finishMobileWizardFlow();
+            return;
+          }
+        } else {
+          if (mobileWizard.mode === "play") {
+            mobileWizard.mode = "bid";
+            mobileWizard.orderStep = state.playerCount - 1;
+          } else if (mobileWizard.orderStep > 0) {
+            mobileWizard.orderStep--;
+          } else if (mobileWizard.mode === "win") {
+            mobileWizard.mode = "play";
+            mobileWizard.orderStep = 0;
+          } else if (mobileWizard.roundIndex > 0) {
+            mobileWizard.mode = "win";
+            mobileWizard.roundIndex--;
+            mobileWizard.orderStep = state.playerCount - 1;
+          } else {
+            mobileWizard.mode = "names";
+            mobileWizard.playerIndex = state.playerCount - 1;
+            mobileWizard.roundIndex = 0;
+            mobileWizard.orderStep = 0;
+          }
+        }
+      }
+
+      renderMobileWizard();
+      if (mobileWizard.mode === "play") {
+        clearTimeout(mobileWizardFocusTimer);
+      } else {
+        focusMobileWizardInput(30);
+      }
+    }
+
+    function renderTable() {
+      const rs = rounds();
+      let html = "<thead><tr>";
+      html += "<th class='sticky-1 round-col' rowspan='2'>Ronda</th>";
+      html += "<th class='sticky-2 cards-col' rowspan='2'>Cartas</th>";
+      for (let p = 0; p < state.playerCount; p++) {
+        html += `<th class='input-col' colspan='3'><input class='name-input' value='${esc(state.players[p])}' data-name='${p}'></th>`;
+      }
+      html += "</tr><tr>";
+      for (let p = 0; p < state.playerCount; p++) html += "<th class='input-col'>Apuesta</th><th class='input-col'>Ganadas</th><th class='input-col'>Puntaje</th>";
+      html += "</tr></thead><tbody>";
+
+      rs.forEach((cards, r) => {
+        const rd = rowData(r);
+        const status = roundStatus(r, cards);
+        const cls = status.complete && status.winsSum !== cards ? "row-warn" : status.valid ? "row-ok" : "";
+        html += `<tr class='${cls}'>`;
+        html += `<td class='sticky-1'>${roundLabel(r)}</td><td class='sticky-2'>${cards}</td>`;
+        for (let p = 0; p < state.playerCount; p++) {
+          const s = score(rd.bid[p], rd.win[p]);
+          const scoreClass = s === null ? "score-empty" : s >= 0 ? "score-good" : "score-bad";
+          html += `<td><input class='cell-input' type='number' inputmode='numeric' min='0' max='${cards}' step='1' value='${rd.bid[p]}' data-r='${r}' data-p='${p}' data-field='bid' data-max='${cards}'></td>`;
+          html += `<td><input class='cell-input' type='number' inputmode='numeric' min='0' max='${cards}' step='1' value='${rd.win[p]}' data-r='${r}' data-p='${p}' data-field='win' data-max='${cards}'></td>`;
+          html += `<td class='score-cell ${scoreClass}' data-score-r='${r}' data-score-p='${p}'>${s === null ? "" : s}</td>`;
+        }
+        html += "</tr>";
+      });
+      html += "</tbody><tfoot><tr>";
+      html += "<td></td><td class='sticky-2'>Castigo manual</td>";
+      for (let p = 0; p < state.playerCount; p++) {
+        const penalty = Number(state.penalties?.[p] || 0);
+        html += `<td class='punish-cell' colspan='3'><span class='punish-total'>${penalty === 0 ? "Sin castigo manual" : penalty}</span><button class='punish-btn' data-p='${p}' onclick='openPenaltyModal(${p})'>Castigar</button></td>`;
+      }
+      html += "</tr></tfoot>";
+      $("gameTable").innerHTML = html;
+
+      document.querySelectorAll(".name-input").forEach(input => {
+        input.addEventListener("input", () => {
+          state.players[Number(input.dataset.name)] = input.value || `Jugador ${Number(input.dataset.name) + 1}`;
+          resetReveal({ keepFinished: true });
+          save();
+          renderRanking();
+        });
+      });
+
+      document.querySelectorAll(".cell-input").forEach(input => {
+        input.addEventListener("focus", () => {
+          setTimeout(() => input.select(), 0);
+        });
+
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") input.blur();
+        });
+
+        input.addEventListener("input", () => {
+          updateCellInput(input, false);
+        });
+
+        input.addEventListener("change", () => {
+          updateCellInput(input, true);
+        });
+      });
+
+
+    }
+
+    function updateCellInput(input, clampValue) {
+          const r = Number(input.dataset.r);
+          const p = Number(input.dataset.p);
+          const field = input.dataset.field;
+          const cards = Number(input.dataset.max);
+          const value = numericCellValue(input.value, cards, clampValue);
+          if (clampValue) input.value = value;
+          rowData(r)[field][p] = value;
+          resetReveal();
+          updateScoreCell(r, p);
+          updateRowClass(r);
+          save();
+          renderRanking();
+    }
+
+    function updateScoreCell(r, p) {
+      const rd = rowData(r);
+      const cell = document.querySelector(`[data-score-r="${r}"][data-score-p="${p}"]`);
+      if (!cell) return;
+      const cards = rounds()[r];
+      const validPair = isValidEntry(rd.bid[p], cards) && isValidEntry(rd.win[p], cards);
+      const s = validPair ? score(rd.bid[p], rd.win[p]) : null;
+      cell.textContent = s === null ? "" : s;
+      cell.classList.toggle("score-empty", s === null);
+      cell.classList.toggle("score-good", s !== null && s >= 0);
+      cell.classList.toggle("score-bad", s !== null && s < 0);
+    }
+
+    function updateRowClass(r) {
+      const rs = rounds();
+      const cards = rs[r];
+      const scoreCell = document.querySelector(`[data-score-r="${r}"]`);
+      const row = scoreCell?.closest("tr");
+      if (!row || !cards) return;
+      const status = roundStatus(r, cards);
+      row.classList.toggle("row-warn", status.complete && status.winsSum !== cards);
+      row.classList.toggle("row-ok", status.valid);
+    }
+
+
+    let activePenaltyPlayer = null;
+
+    function ensurePenaltiesArray() {
+      if (!Array.isArray(state.penalties)) state.penalties = Array(12).fill(0);
+      while (state.penalties.length < 12) state.penalties.push(0);
+    }
+
+    function openPenaltyModal(playerIndex) {
+      ensurePenaltiesArray();
+      activePenaltyPlayer = playerIndex;
+      const playerName = state.players[playerIndex] || `Jugador ${playerIndex + 1}`;
+      $("penaltyPlayerName").textContent = playerName;
+      $("penaltyCurrent").textContent = Number(state.penalties[playerIndex] || 0);
+      $("penaltyInput").value = "-20";
+      $("penaltyModal").classList.remove("hidden");
+      $("penaltyModal").setAttribute("aria-hidden", "false");
+      setTimeout(() => {
+        $("penaltyInput").focus();
+        $("penaltyInput").select();
+      }, 50);
+    }
+
+    function closePenaltyModal() {
+      activePenaltyPlayer = null;
+      $("penaltyModal").classList.add("hidden");
+      $("penaltyModal").setAttribute("aria-hidden", "true");
+    }
+
+    function applyPenaltyFromModal() {
+      if (activePenaltyPlayer === null) return;
+      ensurePenaltiesArray();
+
+      const raw = String($("penaltyInput").value).trim().replace(",", ".");
+      const amount = Number(raw);
+      if (!Number.isFinite(amount) || amount === 0) {
+        alert("Debes escribir un número distinto de 0. Por ejemplo: -20 o 20.");
+        return;
+      }
+
+      const penaltyToAdd = amount < 0 ? amount : -Math.abs(amount);
+      state.penalties[activePenaltyPlayer] = Number(state.penalties[activePenaltyPlayer] || 0) + penaltyToAdd;
+
+      resetReveal({ keepFinished: true });
+      save();
+      closePenaltyModal();
+      render();
+      updateSaveStatus("Castigo aplicado");
+    }
+
+    function removePenaltyFromModal() {
+      if (activePenaltyPlayer === null) return;
+      ensurePenaltiesArray();
+
+      state.penalties[activePenaltyPlayer] = 0;
+      resetReveal({ keepFinished: true });
+      save();
+      closePenaltyModal();
+      render();
+      updateSaveStatus("Castigo quitado");
+    }
+
+    function renderRanking() {
+      const content = $("rankingContent");
+      const status = gameStatus();
+      const revealAllowed = canRevealRanking();
+      const revealCount = Math.max(0, Math.min(state.revealCount || 0, state.playerCount));
+      const scoreVisible = revealCount >= 1;
+      const revealedNameCount = Object.keys(state.revealedNames || {}).length;
+      const revealScoresBtn = $("revealScoresBtn");
+      const finishGameBtn = $("finishGameBtn");
+
+      if (!revealAllowed && state.revealCount > 0) {
+        resetReveal();
+        save();
+      }
+
+      if (finishGameBtn) {
+        const alreadyFinished = state.gameFinished || status.ready;
+        finishGameBtn.disabled = alreadyFinished;
+        finishGameBtn.classList.toggle("done", alreadyFinished);
+        finishGameBtn.textContent = status.ready ? "Partida completa" : state.gameFinished ? "Partida terminada" : "Terminar partida ahora";
+      }
+
+      if (revealScoresBtn) {
+        const allScoresVisible = revealCount >= state.playerCount;
+        revealScoresBtn.disabled = !revealAllowed || allScoresVisible;
+        revealScoresBtn.classList.toggle("done", !revealAllowed || allScoresVisible);
+        revealScoresBtn.textContent = !revealAllowed
+          ? "Ranking bloqueado"
+          : allScoresVisible
+            ? "Todos los puntajes revelados"
+            : revealCount === 0
+              ? "Revelar 1° puntaje"
+              : "Revelar siguiente puntaje";
+      }
+
+      $("rankingStatus").textContent = revealAllowed
+        ? scoreVisible
+          ? `Puntajes revelados: ${revealCount}/${state.playerCount}. Nombres revelados: ${revealedNameCount}/${state.playerCount}`
+          : state.gameFinished
+            ? "Ranking disponible por termino manual"
+            : "Ranking disponible: partida completa"
+        : `Bloqueado: ${status.completeRounds}/${status.totalRounds} rondas completas`;
+
+      if (!revealAllowed) {
+        content.innerHTML = `<div class='hidden-ranking'>Ranking bloqueado hasta terminar la partida. Rondas completas: <strong>${status.completeRounds}/${status.totalRounds}</strong>.<div class='game-lock-note'>Completa todas las apuestas y ganadas con una suma de ganadas igual a las cartas de cada ronda, o usa <strong>Terminar partida ahora</strong> si quieren cerrar la partida antes.</div></div>`;
+        return;
+      }
+
+      if (!scoreVisible) {
+        content.innerHTML = "<div class='hidden-ranking'>Ranking listo, pero oculto. Presiona <strong>Revelar siguiente puntaje</strong> para mostrar el 1° lugar.</div>";
+        return;
+      }
+
+      const rows = rankingRows();
+      let html = "<div class='rank-list'>";
+      rows.slice(0, revealCount).forEach((row) => {
+        const visible = !!state.revealedNames[row.index];
+        const revealLabel = row.tie ? "Revelar nombres del empate" : "Revelar nombre de este lugar";
+        html += `<div class='rank-card ${row.tie ? "tie" : ""}'>`;
+        html += `<div class='place'>${row.place}°</div>`;
+        const manualPenalty = Number(state.penalties?.[row.index] || 0);
+        const penaltyLabel = manualPenalty !== 0 ? `<div class='rank-penalty'>Castigo manual aplicado: ${manualPenalty}</div>` : "";
+        html += `<div><div class='rname ${visible ? "" : "hidden-name"}'>${visible ? esc(row.name) : "Nombre oculto"}</div>${row.tie ? "<div class='tie-label'>Empate</div>" : ""}${penaltyLabel}${visible ? "" : `<button class='reveal-name-btn' data-player='${row.index}'>${revealLabel}</button>`}</div>`;
+        html += `<div class='rscore'>${row.points}</div>`;
+        html += "</div>";
+      });
+      html += "</div>";
+
+      if (revealCount < state.playerCount) {
+        html += `<div class='hidden-ranking' style='margin-top:10px;'>Faltan ${state.playerCount - revealCount} puntaje(s) por revelar.</div>`;
+      }
+
+      content.innerHTML = html;
+
+      content.querySelectorAll(".reveal-name-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const playerIndex = Number(btn.dataset.player);
+          revealTieGroup(rows, playerIndex);
+          save();
+          renderRanking();
+        });
+      });
+    }
+
+    function render() {
+      renderControls();
+      renderTable();
+      renderRanking();
+    }
+
+    function esc(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function backupFileName() {
+      const stamp = new Date().toISOString().slice(0, 19).replaceAll(":", "-");
+      return `Bazas_score_respaldo_${stamp}.json`;
+    }
+
+    function downloadBackup() {
+      const text = JSON.stringify(state, null, 2);
+      const blob = new Blob([text], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = backupFileName();
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      updateSaveStatus("Respaldo descargado");
+    }
+
+    function importBackupFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || ""));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          state = loadState();
+          setTheme(state.theme);
+          save();
+          render();
+          updateSaveStatus("Respaldo importado");
+        } catch {
+          alert("No se pudo importar. Revisa que el archivo sea un respaldo JSON válido de Bazas_score.");
+        } finally {
+          $("importFileInput").value = "";
+        }
+      };
+
+      reader.onerror = () => {
+        alert("No se pudo leer el archivo seleccionado.");
+        $("importFileInput").value = "";
+      };
+
+      reader.readAsText(file);
+    }
+
+    function isMobileSurface() {
+      return window.matchMedia("(max-width: 700px)").matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    function updateShareUi() {}
+
+    function shareableHtml() {
+      const clone = document.documentElement.cloneNode(true);
+      clone.classList.remove("mobile-entry-open", "quick-entry-keyboard");
+      clone.querySelector("body")?.classList.remove("mobile-entry-open");
+      const wizard = clone.querySelector("#mobileWizardModal");
+      if (wizard) {
+        wizard.classList.add("hidden");
+        wizard.setAttribute("aria-hidden", "true");
+      }
+      const manual = clone.querySelector("#manualModal");
+      if (manual) {
+        manual.classList.add("hidden");
+        manual.setAttribute("aria-hidden", "true");
+      }
+      const penalty = clone.querySelector("#penaltyModal");
+      if (penalty) {
+        penalty.classList.add("hidden");
+        penalty.setAttribute("aria-hidden", "true");
+      }
+      return `<!DOCTYPE html>\n${clone.outerHTML}`;
+    }
+
+    function downloadAppCopy(html) {
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "Bazas_score.html";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function shareAppFile() {
+      const html = shareableHtml();
+      const file = new File([html], "Bazas_score.html", { type: "text/html" });
+
+      try {
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            title: "Bazas Score",
+            text: "Contador de puntajes para Bazas.",
+            files: [file]
+          });
+          updateSaveStatus("App compartida");
+          return;
+        }
+      } catch {
+      }
+
+      downloadAppCopy(html);
+      updateSaveStatus("Copia descargada");
+      alert("Se descargó una copia de Bazas_score.html para compartirla por WhatsApp, correo, Drive u otra app.");
+    }
+
+    function openManualModal() {
+      $("manualModal").classList.remove("hidden");
+      $("manualModal").setAttribute("aria-hidden", "false");
+    }
+
+    function closeManualModal() {
+      $("manualModal").classList.add("hidden");
+      $("manualModal").setAttribute("aria-hidden", "true");
+    }
+
+    document.addEventListener("click", (event) => {
+      const punishButton = event.target.closest(".punish-btn");
+      if (!punishButton) return;
+      openPenaltyModal(Number(punishButton.dataset.p));
+    });
+
+    $("penaltyModal").addEventListener("click", (event) => {
+      if (event.target.id === "penaltyModal") closePenaltyModal();
+    });
+
+    $("penaltyInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") applyPenaltyFromModal();
+      if (event.key === "Escape") closePenaltyModal();
+    });
+
+    $("saveStatus").addEventListener("click", () => {
+      save();
+      updateSaveStatus("Guardado ahora");
+    });
+
+    $("manualTopBtn").addEventListener("click", openManualModal);
+    $("manualFab").addEventListener("click", openManualModal);
+    $("manualClose").addEventListener("click", closeManualModal);
+    $("manualModal").addEventListener("click", (event) => {
+      if (event.target.id === "manualModal") closeManualModal();
+    });
+
+    $("quickEntryTopBtn").addEventListener("click", openMobileWizard);
+    $("mobileWizardFab").addEventListener("click", openMobileWizard);
+    $("mobileWizardClose").addEventListener("click", closeMobileWizard);
+    $("mobileWizardModal").addEventListener("click", (event) => {
+      if (event.target.id === "mobileWizardModal") closeMobileWizard();
+    });
+    $("mobileWizardNames").addEventListener("click", () => setMobileWizardMode("names"));
+    $("mobileWizardBids").addEventListener("click", () => setMobileWizardMode("bid"));
+    $("mobileWizardWins").addEventListener("click", () => setMobileWizardMode("win"));
+    $("mobileWizardPrev").addEventListener("click", () => moveMobileWizard(-1));
+    $("mobileWizardNext").addEventListener("click", () => moveMobileWizard(1));
+    $("mobileWizardInput").addEventListener("focus", () => {
+      document.documentElement.classList.add("quick-entry-keyboard");
+      handleQuickEntryViewportChange();
+    });
+    $("mobileWizardInput").addEventListener("input", () => {
+      commitMobileWizardValue(false);
+      updateMobileWizardValidationUi();
+    });
+    $("mobileWizardInput").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") moveMobileWizard(1);
+      if (event.key === "Escape") closeMobileWizard();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !$("manualModal").classList.contains("hidden")) {
+        closeManualModal();
+      }
+    });
+
+    $("mobilePlayerSelect").addEventListener("change", () => {
+      const playerIndex = Number($("mobilePlayerSelect").value);
+      $("mobilePlayerName").value = state.players[playerIndex] || `Jugador ${playerIndex + 1}`;
+      scrollToPlayer(playerIndex);
+    });
+
+    $("mobilePlayerName").addEventListener("input", () => {
+      const playerIndex = Number($("mobilePlayerSelect").value);
+      const name = $("mobilePlayerName").value || `Jugador ${playerIndex + 1}`;
+      state.players[playerIndex] = name;
+
+      const selectedOption = $("mobilePlayerSelect").options[$("mobilePlayerSelect").selectedIndex];
+      if (selectedOption) selectedOption.textContent = name;
+
+      const tableNameInput = document.querySelector(`.name-input[data-name="${playerIndex}"]`);
+      if (tableNameInput) tableNameInput.value = name;
+
+      resetReveal({ keepFinished: true });
+      save();
+      renderRanking();
+    });
+
+    $("newGameBtn").addEventListener("click", () => {
+      if (!confirm("¿Iniciar una nueva partida? Se mantendrán nombres y configuración, pero se borrarán apuestas, ganadas y ranking.")) return;
+      state.data = {};
+      state.penalties = Array(12).fill(0);
+      resetReveal();
+      save();
+      updateSaveStatus("Nueva partida iniciada");
+      render();
+    });
+
+    window.addEventListener("beforeunload", () => {
+      save();
+    });
+
+    window.addEventListener("resize", () => {
+      updateShareUi();
+      handleQuickEntryViewportChange();
+    });
+    window.visualViewport?.addEventListener("resize", handleQuickEntryViewportChange);
+    window.visualViewport?.addEventListener("scroll", handleQuickEntryViewportChange);
+
+    if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+      });
+    }
+
+    $("applyBtn").addEventListener("click", () => {
+      state.playerCount = clamp($("playerCount").value, 2, 12, 5);
+      state.maxCards = clamp($("maxCards").value, 1, 13, 7);
+      state.extraOne = $("extraOne").checked;
+      state.extraMax = $("extraMax").checked;
+      resetReveal();
+      save();
+      render();
+    });
+
+    $("revealScoresBtn").addEventListener("click", () => {
+      if (!canRevealRanking()) {
+        alert("El ranking solo se puede revelar cuando todas las rondas estén completas o cuando uses Terminar partida ahora.");
+        renderRanking();
+        return;
+      }
+      if ((state.revealCount || 0) >= state.playerCount) return;
+      state.revealCount = nextRevealCount(rankingRows(), state.revealCount || 0);
+      save();
+      renderRanking();
+      document.getElementById("ranking").scrollIntoView({ behavior: "smooth" });
+    });
+
+    $("finishGameBtn").addEventListener("click", () => {
+      const status = gameStatus();
+      if (status.ready) {
+        renderRanking();
+        return;
+      }
+      const message = `¿Terminar la partida ahora?\n\nRondas completas: ${status.completeRounds}/${status.totalRounds}.\nLas casillas vacías o inválidas no sumarán puntos.`;
+      if (!confirm(message)) return;
+      state.gameFinished = true;
+      state.finishReason = "manual";
+      resetReveal({ keepFinished: true });
+      save();
+      renderRanking();
+      document.getElementById("ranking").scrollIntoView({ behavior: "smooth" });
+    });
+
+    $("hideRankingBtn").addEventListener("click", () => {
+      state.revealCount = 0;
+      state.revealedNames = {};
+      save();
+      renderRanking();
+    });
+
+    $("clearCellsBtn").addEventListener("click", () => {
+      if (!confirm("¿Limpiar todas las apuestas y ganadas, manteniendo nombres y configuración?")) return;
+      state.data = {};
+      resetReveal();
+      save();
+      render();
+    });
+
+    $("resetBtn").addEventListener("click", () => {
+      if (!confirm("¿Borrar toda la partida actual?")) return;
+      const currentTheme = state.theme;
+      localStorage.removeItem(STORAGE_KEY);
+      state = defaultState();
+      state.theme = currentTheme;
+      setTheme(state.theme);
+      save();
+      render();
+    });
+
+    $("fullscreenBtn").addEventListener("click", () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch?.(() => {});
+      else document.exitFullscreen?.().catch?.(() => {});
+    });
+
+    $("themeBtn").addEventListener("click", () => {
+      setTheme(state.theme === "dark" ? "light" : "dark");
+      save();
+    });
+
+    $("exportBtn").addEventListener("click", () => {
+      downloadBackup();
+    });
+
+    $("importBtn").addEventListener("click", () => {
+      $("importFileInput").click();
+    });
+
+    $("importFileInput").addEventListener("change", (event) => {
+      importBackupFile(event.target.files?.[0]);
+    });
+
+    setTheme(state.theme);
+    updateShareUi();
+    render();
+  </script>
+</body>
+</html>
