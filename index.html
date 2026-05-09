@@ -10,24 +10,10 @@
   <title>Contador de Bazas</title>
   <script>
     (() => {
-      const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="80" y1="40" x2="432" y2="472" gradientUnits="userSpaceOnUse"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#16a34a"/></linearGradient></defs><rect x="20" y="20" width="472" height="472" rx="96" fill="url(#g)"/><rect x="136" y="96" width="250" height="330" rx="34" fill="#fff" opacity=".97"/><rect x="136" y="96" width="250" height="330" rx="34" fill="none" stroke="#dbe7f6" stroke-width="6"/><text x="261" y="330" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="196" font-weight="800" fill="#0f172a">B</text><circle cx="178" cy="134" r="14" fill="#16a34a"/><circle cx="334" cy="134" r="14" fill="#16a34a"/><circle cx="334" cy="374" r="14" fill="#16a34a"/></svg>`;
-      const isHosted = /^https?:$/.test(location.protocol);
-      const iconUrl = isHosted ? "icons/icon.svg" : `data:image/svg+xml,${encodeURIComponent(iconSvg)}`;
-      const manifest = {
-        name: "Bazas Score",
-        short_name: "Bazas",
-        description: "Contador de puntajes para el juego Bazas.",
-        id: "./",
-        start_url: "./",
-        scope: "./",
-        display: "standalone",
-        background_color: "#0b1020",
-        theme_color: "#0f172a",
-        icons: [{ src: iconUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }]
-      };
+      const iconUrl = "icons/icon-512.png";
       document.getElementById("appFavicon").href = iconUrl;
-      document.getElementById("appTouchIcon").href = isHosted ? "icons/apple-touch-icon.png" : iconUrl;
-      document.getElementById("appManifest").href = isHosted ? "manifest.webmanifest" : `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
+      document.getElementById("appTouchIcon").href = "icons/apple-touch-icon.png";
+      document.getElementById("appManifest").href = "manifest.webmanifest";
     })();
   </script>
   <style>
@@ -1084,10 +1070,10 @@
       <label class="check"><input id="extraMax" type="checkbox" /> Jugar 7 a perder</label>
       <button class="primary" id="applyBtn">Aplicar</button>
       <button class="green" id="newGameBtn">Nueva partida</button>
-      <button id="importBtn">Importar</button>
       <button class="amber" id="clearCellsBtn">Limpiar casillas</button>
       <button class="red" id="resetBtn">Reiniciar</button>
       <button id="exportBtn">Respaldar</button>
+      <button id="importBtn">Importar</button>
       <button class="save-status" id="saveStatus" type="button">Guardado automático activo</button>
       <input id="importFileInput" type="file" accept="application/json,.json" hidden />
     </div>
@@ -1191,7 +1177,7 @@
         </div>
 
         <div class="manual-section">
-          <h4>Guardar y respaldar</h4>
+          <h4>Guardar, respaldar e instalar</h4>
           <ul>
             <li>La partida se guarda automáticamente en el dispositivo.</li>
             <li><strong>Guardado automático activo</strong> también funciona como botón: tócalo para forzar un guardado manual si lo necesitas.</li>
