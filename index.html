@@ -328,6 +328,11 @@
       border-color: var(--blue);
     }
 
+    .cell-input.invalid {
+      border-color: var(--red);
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.16);
+    }
+
     .score-cell {
       font-weight: 900;
       background: #f8fafc;
@@ -744,17 +749,36 @@
       min-height: 48px;
     }
 
+    .row-error-note {
+      display: block;
+      margin-top: 2px;
+      color: #b91c1c;
+      font-size: 0.64rem;
+      line-height: 1.05;
+      font-weight: 900;
+      white-space: normal;
+    }
+
     .row-ok td { background: #f0fdf4; }
+    .row-error td { background: #fef2f2; }
     .row-warn td { background: #fff7ed; }
     .row-ok td.sticky-1, .row-ok td.sticky-2 { background: #dcfce7; }
+    .row-error td.sticky-1, .row-error td.sticky-2 { background: #fee2e2; }
     .row-warn td.sticky-1, .row-warn td.sticky-2 { background: #ffedd5; }
 
     html[data-theme="dark"] .row-ok td { background: #052e1a; }
+    html[data-theme="dark"] .row-error td { background: #450a0a; }
     html[data-theme="dark"] .row-warn td { background: #3b2607; }
     html[data-theme="dark"] .row-ok td.sticky-1,
     html[data-theme="dark"] .row-ok td.sticky-2 { background: #064e3b; }
+    html[data-theme="dark"] .row-error td.sticky-1,
+    html[data-theme="dark"] .row-error td.sticky-2 { background: #7f1d1d; }
     html[data-theme="dark"] .row-warn td.sticky-1,
     html[data-theme="dark"] .row-warn td.sticky-2 { background: #63390a; }
+
+    html[data-theme="dark"] .row-error-note {
+      color: #fecaca;
+    }
 
     .ranking-box {
       margin-top: 14px;
@@ -1154,8 +1178,9 @@
           <h4>Reglas de apuestas</h4>
           <ul>
             <li>Cada jugador apuesta cuántas cartas cree que ganará; puede apostar 0.</li>
-            <li>En <strong>Ingreso rápido</strong>, el último jugador de la ronda no puede dejar la suma total de apuestas igual al número de cartas de esa ronda.</li>
+            <li>En la tabla y en <strong>Ingreso rápido</strong>, la suma total de apuestas no puede quedar igual al número de cartas de esa ronda.</li>
             <li>Ejemplo: si la ronda es de 2 cartas, la suma total de apuestas no puede quedar en 2.</li>
+            <li>La suma total de <strong>ganadas</strong> debe ser igual al número de cartas de la ronda; si no, la app mostrará error para corregirlo.</li>
           </ul>
         </div>
 
@@ -1256,6 +1281,10 @@
     const $ = (id) => document.getElementById(id);
     let mobileWizard = { mode: "names", playerIndex: 0, roundIndex: 0, orderStep: 0 };
     let mobileWizardFocusTimer = 0;
+
+    function resetMobileWizardState() {
+      mobileWizard = { mode: "names", playerIndex: 0, roundIndex: 0, orderStep: 0 };
+    }
 
     function defaultState() {
       return {
@@ -1413,31 +1442,57 @@
 
     function roundStatus(r, cards) {
       const rd = rowData(r);
-      let missing = 0;
-      let invalid = 0;
+      let missingBids = 0;
+      let missingWins = 0;
+      let invalidBids = 0;
+      let invalidWins = 0;
+      let bidSum = 0;
       let winsSum = 0;
 
       for (let p = 0; p < state.playerCount; p++) {
         const bid = rd.bid[p];
         const win = rd.win[p];
-        if (bid === "" || win === "") {
-          missing++;
-          continue;
+
+        if (bid === "") {
+          missingBids++;
+        } else if (!isValidEntry(bid, cards)) {
+          invalidBids++;
+        } else {
+          bidSum += Number(bid);
         }
-        if (!isValidEntry(bid, cards) || !isValidEntry(win, cards)) {
-          invalid++;
-          continue;
+
+        if (win === "") {
+          missingWins++;
+        } else if (!isValidEntry(win, cards)) {
+          invalidWins++;
+        } else {
+          winsSum += Number(win);
         }
-        winsSum += Number(win);
       }
 
-      const complete = missing === 0 && invalid === 0;
+      const bidsComplete = missingBids === 0 && invalidBids === 0;
+      const winsComplete = missingWins === 0 && invalidWins === 0;
+      const bidTotalInvalid = bidsComplete && bidSum === cards;
+      const winsTotalInvalid = winsComplete && winsSum !== cards;
+      const missing = missingBids + missingWins;
+      const invalid = invalidBids + invalidWins + (bidTotalInvalid ? 1 : 0) + (winsTotalInvalid ? 1 : 0);
+      const complete = missing === 0 && invalidBids === 0 && invalidWins === 0;
+
       return {
         complete,
-        valid: complete && winsSum === cards,
+        valid: complete && !bidTotalInvalid && !winsTotalInvalid,
         missing,
+        missingBids,
+        missingWins,
         invalid,
-        winsSum
+        invalidBids,
+        invalidWins,
+        bidSum,
+        winsSum,
+        bidsComplete,
+        winsComplete,
+        bidTotalInvalid,
+        winsTotalInvalid
       };
     }
 
@@ -1457,7 +1512,7 @@
         if (row.valid) status.completeRounds++;
         if (row.missing > 0) status.missingRounds++;
         if (row.invalid > 0) status.invalidRounds++;
-        if (row.complete && row.winsSum !== cards) status.sumWarningRounds++;
+        if ((row.bidsComplete && row.bidTotalInvalid) || (row.winsComplete && row.winsTotalInvalid)) status.sumWarningRounds++;
       });
 
       status.ready = status.completeRounds === status.totalRounds;
@@ -1472,6 +1527,8 @@
       const total = Array(state.playerCount).fill(0);
       rounds().forEach((cards, r) => {
         const rd = rowData(r);
+        const status = roundStatus(r, cards);
+        if (status.bidTotalInvalid || status.winsTotalInvalid) return;
         for (let p = 0; p < state.playerCount; p++) {
           if (!isValidEntry(rd.bid[p], cards) || !isValidEntry(rd.win[p], cards)) continue;
           const s = score(rd.bid[p], rd.win[p]);
@@ -1613,6 +1670,10 @@
       return mobileWizard.mode === "bid" && mobileWizard.orderStep === state.playerCount - 1;
     }
 
+    function isLastWinnerStep() {
+      return mobileWizard.mode === "win" && mobileWizard.orderStep === state.playerCount - 1;
+    }
+
     function currentBidRuleStatus() {
       if (!isLastBidderStep()) return { invalid: false, total: 0, cards: rounds()[mobileWizard.roundIndex] || 1 };
 
@@ -1633,26 +1694,51 @@
       };
     }
 
+    function currentWinRuleStatus() {
+      if (!isLastWinnerStep()) return { invalid: false, total: 0, cards: rounds()[mobileWizard.roundIndex] || 1 };
+
+      const cards = rounds()[mobileWizard.roundIndex] || 1;
+      const rd = rowData(mobileWizard.roundIndex);
+      const order = mobileOrderForRound(mobileWizard.roundIndex);
+      const total = order.reduce((sum, playerIndex) => {
+        const value = rd.win[playerIndex];
+        if (value === "" || value === null || value === undefined) return sum;
+        const n = Number(value);
+        return Number.isInteger(n) ? sum + n : sum;
+      }, 0);
+
+      return {
+        invalid: total !== cards,
+        total,
+        cards
+      };
+    }
+
     function updateMobileWizardValidationUi() {
       const error = $("mobileWizardError");
       const input = $("mobileWizardInput");
       const next = $("mobileWizardNext");
       if (!error || !input || !next) return { invalid: false };
 
-      const status = currentBidRuleStatus();
-      const isInvalid = mobileWizard.mode === "bid" && status.invalid;
+      const bidStatus = currentBidRuleStatus();
+      const winStatus = currentWinRuleStatus();
+      const isBidInvalid = mobileWizard.mode === "bid" && bidStatus.invalid;
+      const isWinInvalid = mobileWizard.mode === "win" && winStatus.invalid;
+      const isInvalid = isBidInvalid || isWinInvalid;
 
       error.classList.toggle("hidden", !isInvalid);
       input.classList.toggle("invalid", isInvalid);
       next.disabled = isInvalid;
 
-      if (isInvalid) {
-        error.textContent = `La suma de apuestas queda en ${status.total}, igual a ${status.cards} carta(s). El último jugador debe elegir otro número.`;
+      if (isBidInvalid) {
+        error.textContent = `La suma de apuestas queda en ${bidStatus.total}, igual a ${bidStatus.cards} carta(s). El último jugador debe elegir otro número.`;
+      } else if (isWinInvalid) {
+        error.textContent = `La suma de ganadas queda en ${winStatus.total}, pero debe ser ${winStatus.cards} carta(s). Corrige las ganadas antes de continuar.`;
       } else {
         error.textContent = "";
       }
 
-      return status;
+      return isBidInvalid ? bidStatus : winStatus;
     }
 
     function updateQuickEntryViewport() {
@@ -1918,6 +2004,19 @@
             }
             mobileWizard.mode = "play";
             mobileWizard.orderStep = 0;
+          } else if (mobileWizard.mode === "win") {
+            const status = currentWinRuleStatus();
+            if (status.invalid) {
+              updateMobileWizardValidationUi();
+              focusMobileWizardInput(0);
+              return;
+            }
+            if (mobileWizard.roundIndex < rs.length - 1) {
+              goToRoundStart(mobileWizard.roundIndex + 1);
+            } else {
+              finishMobileWizardFlow();
+              return;
+            }
           } else if (mobileWizard.roundIndex < rs.length - 1) {
             goToRoundStart(mobileWizard.roundIndex + 1);
           } else {
@@ -1967,6 +2066,20 @@
       }
     }
 
+    function roundErrorMessages(status, cards) {
+      const messages = [];
+      if (status.bidTotalInvalid) messages.push(`Apuestas = ${cards}; debe ser distinto.`);
+      if (status.winsTotalInvalid) messages.push(`Ganadas ${status.winsSum}/${cards}; debe igualar cartas.`);
+      return messages;
+    }
+
+    function rowCardsCellHtml(cards, status) {
+      const messages = roundErrorMessages(status, cards);
+      const title = messages.length ? ` title="${esc(messages.join(" "))}"` : "";
+      const note = messages.length ? `<span class="row-error-note">${esc(messages.join(" "))}</span>` : "";
+      return `<span class="cards-count"${title}>${cards}</span>${note}`;
+    }
+
     function renderTable() {
       const rs = rounds();
       let html = "<thead><tr>";
@@ -1982,14 +2095,15 @@
       rs.forEach((cards, r) => {
         const rd = rowData(r);
         const status = roundStatus(r, cards);
-        const cls = status.complete && status.winsSum !== cards ? "row-warn" : status.valid ? "row-ok" : "";
+        const hasRowError = status.bidTotalInvalid || status.winsTotalInvalid;
+        const cls = hasRowError ? "row-error" : status.valid ? "row-ok" : "";
         html += `<tr class='${cls}'>`;
-        html += `<td class='sticky-1'>${roundLabel(r)}</td><td class='sticky-2'>${cards}</td>`;
+        html += `<td class='sticky-1'>${roundLabel(r)}</td><td class='sticky-2'>${rowCardsCellHtml(cards, status)}</td>`;
         for (let p = 0; p < state.playerCount; p++) {
           const s = score(rd.bid[p], rd.win[p]);
           const scoreClass = s === null ? "score-empty" : s >= 0 ? "score-good" : "score-bad";
-          html += `<td><input class='cell-input' type='number' inputmode='numeric' min='0' max='${cards}' step='1' value='${rd.bid[p]}' data-r='${r}' data-p='${p}' data-field='bid' data-max='${cards}' ${isExtraMaxRoundIndex(r) ? "readonly aria-label='Apuesta fija 0 en partida especial'" : ""}></td>`;
-          html += `<td><input class='cell-input' type='number' inputmode='numeric' min='0' max='${cards}' step='1' value='${rd.win[p]}' data-r='${r}' data-p='${p}' data-field='win' data-max='${cards}'></td>`;
+          html += `<td><input class='cell-input ${status.bidTotalInvalid ? "invalid" : ""}' type='number' inputmode='numeric' min='0' max='${cards}' step='1' value='${rd.bid[p]}' data-r='${r}' data-p='${p}' data-field='bid' data-max='${cards}' ${isExtraMaxRoundIndex(r) ? "readonly aria-label='Apuesta fija 0 en partida especial'" : ""}></td>`;
+          html += `<td><input class='cell-input ${status.winsTotalInvalid ? "invalid" : ""}' type='number' inputmode='numeric' min='0' max='${cards}' step='1' value='${rd.win[p]}' data-r='${r}' data-p='${p}' data-field='win' data-max='${cards}'></td>`;
           html += `<td class='score-cell ${scoreClass}' data-score-r='${r}' data-score-p='${p}'>${s === null ? "" : s}</td>`;
         }
         html += "</tr>";
@@ -2068,8 +2182,18 @@
       const row = scoreCell?.closest("tr");
       if (!row || !cards) return;
       const status = roundStatus(r, cards);
-      row.classList.toggle("row-warn", status.complete && status.winsSum !== cards);
+      const hasRowError = status.bidTotalInvalid || status.winsTotalInvalid;
+      row.classList.toggle("row-error", hasRowError);
+      row.classList.toggle("row-warn", false);
       row.classList.toggle("row-ok", status.valid);
+      const cardsCell = row.querySelector("td.sticky-2");
+      if (cardsCell) cardsCell.innerHTML = rowCardsCellHtml(cards, status);
+      row.querySelectorAll("[data-field='bid']").forEach(input => {
+        input.classList.toggle("invalid", status.bidTotalInvalid);
+      });
+      row.querySelectorAll("[data-field='win']").forEach(input => {
+        input.classList.toggle("invalid", status.winsTotalInvalid);
+      });
     }
 
 
@@ -2438,6 +2562,7 @@
       state.data = {};
       state.penalties = Array(12).fill(0);
       resetReveal();
+      resetMobileWizardState();
       save();
       updateSaveStatus("Nueva partida iniciada");
       render();
@@ -2466,6 +2591,7 @@
       state.extraOne = $("extraOne").checked;
       state.extraMax = $("extraMax").checked;
       resetReveal();
+      resetMobileWizardState();
       save();
       render();
     });
@@ -2520,6 +2646,7 @@
       localStorage.removeItem(STORAGE_KEY);
       state = defaultState();
       state.theme = currentTheme;
+      resetMobileWizardState();
       setTheme(state.theme);
       save();
       render();
