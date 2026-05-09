@@ -1084,7 +1084,7 @@
     <div class="toolbar">
       <div class="field">
         <label for="playerCount">Jugadores</label>
-        <select id="playerCount"></select>
+        <input id="playerCount" type="number" min="1" step="1" inputmode="numeric" value="5" />
       </div>
       <div class="field">
         <label for="maxCards">Máximo cartas</label>
@@ -1278,6 +1278,7 @@
 
   <script>
     const STORAGE_KEY = "bazas_excel_like_v9_castigo_directo";
+    const DEFAULT_PLAYER_COUNT = 5;
     const $ = (id) => document.getElementById(id);
     let mobileWizard = { mode: "names", playerIndex: 0, roundIndex: 0, orderStep: 0 };
     let mobileWizardFocusTimer = 0;
@@ -1288,13 +1289,13 @@
 
     function defaultState() {
       return {
-        playerCount: 5,
+        playerCount: DEFAULT_PLAYER_COUNT,
         maxCards: 7,
         extraOne: false,
         extraMax: false,
-        players: Array.from({ length: 12 }, (_, i) => `Jugador ${i + 1}`),
+        players: Array.from({ length: DEFAULT_PLAYER_COUNT }, (_, i) => `Jugador ${i + 1}`),
         data: {},
-        penalties: Array(12).fill(0),
+        penalties: Array(DEFAULT_PLAYER_COUNT).fill(0),
         revealCount: 0,
         revealedNames: {},
         gameFinished: false,
@@ -1311,12 +1312,10 @@
         const saved = raw ? JSON.parse(raw) : {};
         const base = defaultState();
         const merged = { ...base, ...saved };
-        merged.players = Array.isArray(saved.players) ? saved.players : base.players;
-        while (merged.players.length < 12) merged.players.push(`Jugador ${merged.players.length + 1}`);
-        merged.playerCount = clamp(merged.playerCount, 2, 12, 5);
+        merged.playerCount = normalizePlayerCount(merged.playerCount, base.playerCount);
+        merged.players = ensurePlayerList(Array.isArray(saved.players) ? saved.players : base.players, merged.playerCount);
         merged.maxCards = clamp(merged.maxCards, 1, 13, 7);
-        merged.penalties = Array.isArray(saved.penalties) ? saved.penalties : Array(12).fill(0);
-        while (merged.penalties.length < 12) merged.penalties.push(0);
+        merged.penalties = ensurePenaltyList(Array.isArray(saved.penalties) ? saved.penalties : base.penalties, merged.playerCount);
         merged.revealCount = clamp(saved.revealCount ?? 0, 0, merged.playerCount, 0);
         merged.revealedNames = saved.revealedNames && typeof saved.revealedNames === "object" ? saved.revealedNames : {};
         merged.data = saved.data && typeof saved.data === "object" ? saved.data : {};
@@ -1352,6 +1351,38 @@
       const n = parseInt(value, 10);
       if (Number.isNaN(n)) return fallback;
       return Math.max(min, Math.min(max, n));
+    }
+
+    function normalizePlayerCount(value, fallback = DEFAULT_PLAYER_COUNT) {
+      const n = parseInt(value, 10);
+      if (Number.isNaN(n)) return fallback;
+      return Math.max(1, n);
+    }
+
+    function ensurePlayerList(players, count) {
+      const list = Array.isArray(players) ? players : [];
+      while (list.length < count) list.push(`Jugador ${list.length + 1}`);
+      return list;
+    }
+
+    function ensurePenaltyList(penalties, count) {
+      const list = Array.isArray(penalties) ? penalties : [];
+      while (list.length < count) list.push(0);
+      return list;
+    }
+
+    function ensurePlayerStorage() {
+      state.playerCount = normalizePlayerCount(state.playerCount, DEFAULT_PLAYER_COUNT);
+      state.players = ensurePlayerList(state.players, state.playerCount);
+      state.penalties = ensurePenaltyList(state.penalties, state.playerCount);
+
+      Object.values(state.data || {}).forEach(rd => {
+        if (!rd || typeof rd !== "object") return;
+        if (!Array.isArray(rd.bid)) rd.bid = [];
+        if (!Array.isArray(rd.win)) rd.win = [];
+        while (rd.bid.length < state.playerCount) rd.bid.push("");
+        while (rd.win.length < state.playerCount) rd.win.push("");
+      });
     }
 
     function resetReveal(options = {}) {
@@ -1420,14 +1451,17 @@
     }
 
     function rowData(r) {
-      if (!state.data[r]) state.data[r] = { bid: Array(12).fill(""), win: Array(12).fill("") };
-      if (!Array.isArray(state.data[r].bid)) state.data[r].bid = Array(12).fill("");
-      if (!Array.isArray(state.data[r].win)) state.data[r].win = Array(12).fill("");
-      while (state.data[r].bid.length < 12) state.data[r].bid.push("");
-      while (state.data[r].win.length < 12) state.data[r].win.push("");
+      const count = state.playerCount;
+      if (!state.data[r]) state.data[r] = { bid: Array(count).fill(""), win: Array(count).fill("") };
+      if (!Array.isArray(state.data[r].bid)) state.data[r].bid = Array(count).fill("");
+      if (!Array.isArray(state.data[r].win)) state.data[r].win = Array(count).fill("");
+      while (state.data[r].bid.length < count) state.data[r].bid.push("");
+      while (state.data[r].win.length < count) state.data[r].win.push("");
       state.data[r].bid = state.data[r].bid.map(v => v === "" ? "" : numericCellValue(v, 13, true));
       state.data[r].win = state.data[r].win.map(v => v === "" ? "" : numericCellValue(v, 13, true));
-      if (isExtraMaxRoundIndex(r)) state.data[r].bid = state.data[r].bid.map(() => 0);
+      if (isExtraMaxRoundIndex(r)) {
+        for (let p = 0; p < count; p++) state.data[r].bid[p] = 0;
+      }
       return state.data[r];
     }
 
@@ -1584,15 +1618,7 @@
     }
 
     function renderControls() {
-      const select = $("playerCount");
-      select.innerHTML = "";
-      for (let i = 2; i <= 12; i++) {
-        const opt = document.createElement("option");
-        opt.value = i;
-        opt.textContent = i;
-        if (i === state.playerCount) opt.selected = true;
-        select.appendChild(opt);
-      }
+      $("playerCount").value = state.playerCount;
       $("maxCards").value = state.maxCards;
       $("extraOne").checked = state.extraOne;
       $("extraMax").checked = state.extraMax;
@@ -2200,8 +2226,7 @@
     let activePenaltyPlayer = null;
 
     function ensurePenaltiesArray() {
-      if (!Array.isArray(state.penalties)) state.penalties = Array(12).fill(0);
-      while (state.penalties.length < 12) state.penalties.push(0);
+      state.penalties = ensurePenaltyList(state.penalties, state.playerCount);
     }
 
     function openPenaltyModal(playerIndex) {
@@ -2560,7 +2585,7 @@
     $("newGameBtn").addEventListener("click", () => {
       if (!confirm("¿Iniciar una nueva partida? Se mantendrán nombres y configuración, pero se borrarán apuestas, ganadas y ranking.")) return;
       state.data = {};
-      state.penalties = Array(12).fill(0);
+      state.penalties = Array(state.playerCount).fill(0);
       resetReveal();
       resetMobileWizardState();
       save();
@@ -2586,10 +2611,11 @@
     }
 
     $("applyBtn").addEventListener("click", () => {
-      state.playerCount = clamp($("playerCount").value, 2, 12, 5);
+      state.playerCount = normalizePlayerCount($("playerCount").value, state.playerCount || DEFAULT_PLAYER_COUNT);
       state.maxCards = clamp($("maxCards").value, 1, 13, 7);
       state.extraOne = $("extraOne").checked;
       state.extraMax = $("extraMax").checked;
+      ensurePlayerStorage();
       resetReveal();
       resetMobileWizardState();
       save();
