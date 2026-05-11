@@ -1,4 +1,4 @@
-const CACHE_NAME = "bazas-score-v4";
+const CACHE_NAME = "bazas-score-v5";
 const APP_SHELL = [
   "./",
   "./index.html",

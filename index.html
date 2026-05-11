@@ -2617,7 +2617,8 @@
     $("maxCards").addEventListener("input", updateExtraMaxLabel);
 
     $("newGameBtn").addEventListener("click", () => {
-      if (!confirm("¿Iniciar una nueva partida? Se mantendrán nombres y configuración, pero se borrarán apuestas, ganadas y ranking.")) return;
+      if (!confirm("¿Iniciar una nueva partida? Se mantendrá la configuración, pero se borrarán nombres, apuestas, ganadas, castigos y ranking.")) return;
+      state.players = Array.from({ length: state.playerCount }, (_, i) => `Jugador ${i + 1}`);
       state.data = {};
       state.penalties = Array(state.playerCount).fill(0);
       resetReveal();
