@@ -1130,8 +1130,6 @@
       <label class="check"><input id="extraMax" type="checkbox" /> <span id="extraMaxLabel">Apostar 7 a perder</span></label>
       <button class="primary" id="applyBtn">Aplicar</button>
       <button class="green" id="newGameBtn">Nueva partida</button>
-      <button class="amber" id="clearCellsBtn">Limpiar casillas</button>
-      <button class="red" id="resetBtn">Reiniciar</button>
       <button id="exportBtn">Respaldar</button>
       <button id="importBtn">Importar</button>
       <button class="save-status" id="saveStatus" type="button">Guardado automático activo</button>
@@ -2692,26 +2690,6 @@
       state.revealedNames = {};
       save();
       renderRanking();
-    });
-
-    $("clearCellsBtn").addEventListener("click", () => {
-      if (!confirm("¿Limpiar todas las apuestas y ganadas, manteniendo nombres y configuración?")) return;
-      state.data = {};
-      resetReveal();
-      save();
-      render();
-    });
-
-    $("resetBtn").addEventListener("click", () => {
-      if (!confirm("¿Borrar toda la partida actual?")) return;
-      const currentTheme = state.theme;
-      localStorage.removeItem(STORAGE_KEY);
-      state = defaultState();
-      state.theme = currentTheme;
-      resetMobileWizardState();
-      setTheme(state.theme);
-      save();
-      render();
     });
 
     $("fullscreenBtn").addEventListener("click", () => {
